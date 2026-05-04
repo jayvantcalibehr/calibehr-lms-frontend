@@ -1,0 +1,246 @@
+/* ═══════════════════════════════════════════════════════════════════
+   CALIBEHR LMS — DESIGN SYSTEM v2
+   Geist · Geist Mono — tech-forward all-sans (Vercel/Linear style)
+   Emerald brand · Warm stone neutrals · Navy sidebar (always)
+   ─────────────────────────────────────────────────────────────────── */
+
+/* Geist + Geist Mono from Fontshare (mirror of Vercel's Geist) */
+@import url('https://api.fontshare.com/v2/css?f[]=geist@400,500,600,700,800&f[]=geist-mono@400,500&display=swap');
+
+/* Geist headlines — bump to 600 for proper presence.
+   Without this, page heroes look thin because the original design
+   used Instrument Serif at weight 400 (which looks bold for serifs).
+   Targets every element using the display font + all native heading tags. */
+[style*="font-family: var(--font-display)"],
+[class*="title"][class*="hero"],
+.dh-title, .lb-hero-title, .cr-title, .qz-title, .iv-title,
+.lb-rank-value, .dh-stat-value, .lb-stat-num, .lb-points,
+.cdp-title, .cdp-prog-pct, .cdp-section-title, .cdp-empty-title,
+.cdp-trainer-avatar, .cdp-panel-title, .ta-title, .ta-score,
+.ac-title, .ac-stat-num, .ac-modal-title, .ac-empty-title, .ac-ch-num,
+h1, h2, h3 {
+  font-weight: 600 !important;
+}
+
+/* Even bigger heroes get 700 for that startup-display feel */
+.dh-title, .lb-hero-title, .cr-title, .qz-title, .iv-title, .ac-title,
+.cdp-title, h1 {
+  font-weight: 700 !important;
+  letter-spacing: -0.04em;
+}
+
+/* Geist is monolithic — same family for body and display.
+   Headlines use heavier weights (600/700) instead of a separate serif. */
+
+/* ═══ THEME: LIGHT (default) ═══ */
+:root, [data-theme="light"] {
+  /* ── Surfaces (warm stone palette) ── */
+  --bg:              #fafaf9;             /* page background — warm off-white */
+  --surface:         #ffffff;             /* cards, panels */
+  --surface-2:       #f5f5f4;             /* nested / subtle backgrounds */
+  --surface-3:       #e7e5e4;             /* hover, dividers */
+  --overlay:         rgba(12, 10, 9, 0.45);
+
+  /* ── Borders ── */
+  --border:          rgba(15, 23, 42, 0.08);
+  --border-strong:   rgba(15, 23, 42, 0.14);
+
+  /* ── Text (warm neutrals, not pure gray) ── */
+  --text:            #0c0a09;             /* warm near-black */
+  --text-2:          #44403c;             /* secondary */
+  --text-3:          #78716c;             /* tertiary, hints */
+  --text-inverse:    #fafaf9;
+
+  /* ── Brand accent — emerald (matches login page) ── */
+  --accent:          #10b981;
+  --accent-hover:    #059669;
+  --accent-pressed:  #047857;
+  --accent-soft:     rgba(16, 185, 129, 0.10);
+  --accent-soft-2:   rgba(16, 185, 129, 0.18);
+  --accent-text:     #ffffff;
+
+  /* ── Semantic ── */
+  --success:         #10b981;
+  --success-soft:    rgba(16, 185, 129, 0.10);
+  --warning:         #f59e0b;
+  --warning-soft:    rgba(245, 158, 11, 0.12);
+  --danger:          #ef4444;
+  --danger-soft:     rgba(239, 68, 68, 0.10);
+  --info:            #0ea5e9;
+  --info-soft:       rgba(14, 165, 233, 0.10);
+
+  /* ── Shadows (multi-layer, refined) ── */
+  --shadow-xs:       0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm:       0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-md:       0 2px 4px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg:       0 4px 6px rgba(15, 23, 42, 0.04), 0 12px 28px rgba(15, 23, 42, 0.10);
+  --shadow-xl:       0 8px 16px rgba(15, 23, 42, 0.08), 0 24px 56px rgba(15, 23, 42, 0.12);
+
+  /* ── Hairline ring ── */
+  --ring:            inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+  --ring-focus:      0 0 0 3px rgba(16, 185, 129, 0.20);
+}
+
+/* ═══ THEME: DARK ═══ */
+[data-theme="dark"] {
+  /* ── Surfaces (proper depth, not just inverted) ── */
+  --bg:              #0a0a0b;             /* premium near-black */
+  --surface:         #131316;             /* slightly elevated */
+  --surface-2:       #1a1a1d;             /* nested */
+  --surface-3:       #232328;             /* hover */
+  --overlay:         rgba(0, 0, 0, 0.65);
+
+  --border:          rgba(255, 255, 255, 0.08);
+  --border-strong:   rgba(255, 255, 255, 0.14);
+
+  --text:            #fafaf9;
+  --text-2:          #a8a29e;
+  --text-3:          #78716c;
+  --text-inverse:    #0c0a09;
+
+  /* Lighter emerald for dark — better contrast */
+  --accent:          #34d399;
+  --accent-hover:    #6ee7b7;
+  --accent-pressed:  #10b981;
+  --accent-soft:     rgba(52, 211, 153, 0.14);
+  --accent-soft-2:   rgba(52, 211, 153, 0.22);
+  --accent-text:     #042f2e;
+
+  --success:         #34d399;
+  --success-soft:    rgba(52, 211, 153, 0.14);
+  --warning:         #fbbf24;
+  --warning-soft:    rgba(251, 191, 36, 0.14);
+  --danger:          #f87171;
+  --danger-soft:     rgba(248, 113, 113, 0.14);
+  --info:            #38bdf8;
+  --info-soft:       rgba(56, 189, 248, 0.14);
+
+  --shadow-xs:       0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-sm:       0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md:       0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.4);
+  --shadow-lg:       0 4px 8px rgba(0, 0, 0, 0.5), 0 16px 32px rgba(0, 0, 0, 0.4);
+  --shadow-xl:       0 8px 16px rgba(0, 0, 0, 0.5), 0 32px 64px rgba(0, 0, 0, 0.5);
+
+  --ring:            inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --ring-focus:      0 0 0 3px rgba(52, 211, 153, 0.28);
+}
+
+/* ═══ TOKENS (theme-agnostic) ═══ */
+:root {
+  /* ── Typography ── */
+  --font-display: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-body:    'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono:    'Geist Mono', 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
+
+  /* ── Type scale ── */
+  --text-xs:      11px;
+  --text-sm:      12px;
+  --text-base:    13px;
+  --text-md:      14px;
+  --text-lg:      16px;
+  --text-xl:      19px;
+  --text-2xl:     24px;
+  --text-3xl:     32px;
+  --text-4xl:     44px;
+  --text-display: 56px;
+
+  /* ── Spacing ── */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  20px;
+  --s-6:  24px;
+  --s-7:  32px;
+  --s-8:  40px;
+  --s-9:  56px;
+  --s-10: 72px;
+
+  /* ── Radii ── */
+  --r-sm:   6px;
+  --r-md:   10px;
+  --r-lg:   14px;
+  --r-xl:   20px;
+  --r-2xl:  28px;
+  --r-pill: 999px;
+
+  /* ── Motion ── */
+  --ease:        cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out:    cubic-bezier(0, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 120ms;
+  --duration:      180ms;
+  --duration-slow: 320ms;
+
+  /* ── Layout ── */
+  --sidebar-w:   240px;
+  --topbar-h:    60px;
+  --content-max: 1200px;
+
+  /* ── Sidebar (always navy — brand chrome, not theme element) ── */
+  --sb-bg:           linear-gradient(180deg, #0c1420 0%, #0a1c1c 100%);
+  --sb-border:       rgba(255, 255, 255, 0.06);
+  --sb-text:         rgba(255, 255, 255, 0.62);
+  --sb-text-active:  #ffffff;
+  --sb-surface:      rgba(255, 255, 255, 0.04);
+  --sb-surface-hover:rgba(255, 255, 255, 0.07);
+}
+
+/* ═══ GLOBAL RESET ═══ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background-color var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+
+body {
+  font-feature-settings: 'ss01', 'ss02', 'cv11';
+  font-variant-ligatures: contextual;
+}
+
+button, input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+button { cursor: pointer; }
+
+::selection {
+  background: var(--accent-soft-2);
+  color: var(--accent-pressed);
+}
+[data-theme="dark"] ::selection { color: var(--accent-hover); }
+
+/* Scrollbars — minimal, modern */
+::-webkit-scrollbar           { width: 10px; height: 10px; }
+::-webkit-scrollbar-track     { background: transparent; }
+::-webkit-scrollbar-thumb     {
+  background: var(--border-strong);
+  border-radius: 5px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+/* Focus ring */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+  border-radius: var(--r-sm);
+}
+
+html { overflow-x: hidden; }
