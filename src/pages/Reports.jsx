@@ -234,14 +234,14 @@ function CourseReport({ courses, companies, departments, onToast }) {
                       placeholder="— Select course —"
                       options={courses.map(c => ({ value: c.id, label: c.name }))}/>
       </Field>
-      <Field label="Companies">
+      {/* <Field label="Companies">
         <MultiSelect options={companies} value={companyList} onChange={setCompanyList}
                      placeholder="All companies"/>
       </Field>
       <Field label="Departments">
         <MultiSelect options={departments} value={deptList} onChange={setDeptList}
                      placeholder="All departments"/>
-      </Field>
+      </Field> */}
 
       {courseID && (
         <button className="rpt-count-btn" onClick={getCount} disabled={counting}>
@@ -423,10 +423,10 @@ function MatrixReport({ courses, companies, departments, verticals, branches, on
   return (
     <ReportCard icon={<RiGridLine size={18}/>} iconC1="#10B981" iconC2="#059669"
                 title="Matrix report" desc="Candidate × Courses matrix — ECR live data" wide featured>
-      <div className="rpt-info">
+      {/* <div className="rpt-info">
         <RiInformationLine size={14}/>
         <span>EmpCode · Name · Email · Company · Vertical · Dept · DOJ · Location · Designation · RM · FH · Course · Mode · Completion · Score</span>
-      </div>
+      </div> */}
 
       <div className="rpt-fields rpt-fields--3">
         <Field label="Courses">
