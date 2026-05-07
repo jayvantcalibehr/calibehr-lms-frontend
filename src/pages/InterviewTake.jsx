@@ -124,13 +124,26 @@ export default function InterviewTake() {
   // ═══════════════════════════════════════════════════════════
   // Record / Stop / Upload
   // ═══════════════════════════════════════════════════════════
+  // MIME type detection — Safari only supports video/mp4, Chrome/Firefox support video/webm
+  const getSupportedMimeType = () => {
+    const types = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+      'video/mp4;codecs=h264,aac',
+      'video/mp4',
+    ];
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type)) return type;
+    }
+    return ''; // browser default
+  };
+
   const startRecording = () => {
     if (!stream) return;
     chunksRef.current = [];
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
-      ? 'video/webm;codecs=vp9,opus'
-      : 'video/webm';
-    const rec = new MediaRecorder(stream, { mimeType });
+    const mimeType = getSupportedMimeType();
+    const rec = new MediaRecorder(stream, mimeType ? { mimeType } : {});
     rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     rec.onstop = uploadRecording;
     rec.start();
@@ -150,11 +163,14 @@ export default function InterviewTake() {
 
   const uploadRecording = async () => {
     setPhase('uploading');
-    const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+    const recorder = recorderRef.current;
+    const mimeType = recorder?.mimeType || 'video/webm';
+    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(chunksRef.current, { type: mimeType });
     const q = data.questions[qIndex];
 
     const formData = new FormData();
-    formData.append('video', blob, `q${q.id}_response.webm`);
+    formData.append('video', blob, `q${q.id}_response.${ext}`);
     formData.append('questionID', q.id);
 
     try {

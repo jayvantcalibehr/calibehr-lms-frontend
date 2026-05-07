@@ -665,7 +665,8 @@ const CSS = `
 .ss-chev { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
 
 /* ═══ MULTI-SELECT ═══ */
-.ms { position: relative; }
+.ms { position: relative; z-index: 1; }
+.ms:focus-within { z-index: 100; }
 .ms-trigger {
   width: 100%; display: flex; align-items: center; justify-content: space-between;
   gap: var(--s-2); padding: 9px 12px;
@@ -692,7 +693,7 @@ const CSS = `
   background: var(--surface); border: 1px solid var(--border-strong);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-lg);
-  z-index: 50;
+  z-index: 9999;
   animation: msPop 150ms var(--ease-out);
   max-height: 320px; display: flex; flex-direction: column;
   overflow: hidden;
