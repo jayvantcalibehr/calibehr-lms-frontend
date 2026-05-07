@@ -5,6 +5,7 @@ import Courses      from './pages/Courses';
 import CourseDetail from './pages/CourseDetail';
 import Quiz         from './pages/Quiz';
 import QuizTake     from './pages/QuizTake';      // NEW: public quiz page
+import InterviewTake from './pages/InterviewTake'; // NEW: public interview recording page
 import Interview    from './pages/Interview';
 import Leaderboard  from './pages/Leaderboard';
 import Reports      from './pages/Reports';
@@ -25,6 +26,9 @@ export default function App() {
 
         {/* Public quiz invite link — recipient takes quiz from email link */}
         <Route path="/quiz-take/:inviteId" element={<QuizTake />} />
+
+        {/* Public interview invite link — recipient records video answers */}
+        <Route path="/interview-take/:uniqueId" element={<InterviewTake />} />
 
         {/* ──────────── LOGGED-IN ROUTES ──────────── */}
         <Route path="/dashboard"
