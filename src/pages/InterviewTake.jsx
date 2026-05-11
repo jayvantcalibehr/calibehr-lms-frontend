@@ -145,7 +145,7 @@ export default function InterviewTake() {
     const mimeType = getSupportedMimeType();
     const rec = new MediaRecorder(stream, mimeType ? { mimeType } : {});
     rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-    rec.onstop = uploadRecording;
+    rec.onstop = handleRecordingStop;
     rec.start();
     recorderRef.current = rec;
 
@@ -161,16 +161,34 @@ export default function InterviewTake() {
     }
   };
 
-  const uploadRecording = async () => {
-    setPhase('uploading');
+  const handleRecordingStop = async () => {
     const recorder = recorderRef.current;
     const mimeType = recorder?.mimeType || 'video/webm';
-    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
     const blob = new Blob(chunksRef.current, { type: mimeType });
     const q = data.questions[qIndex];
+    await uploadRecording(blob, q);
+  };
+
+  const [uploadError, setUploadError] = useState(false);
+  const [retrying,    setRetrying]    = useState(false);
+  const lastBlobRef   = useRef(null);
+  const lastQuestionRef = useRef(null);
+
+  const uploadRecording = async (blob, question) => {
+    setPhase('uploading');
+    setUploadError(false);
+    const q = question || lastQuestionRef.current;
+    const b = blob || lastBlobRef.current;
+
+    // Store for retry
+    lastBlobRef.current = b;
+    lastQuestionRef.current = q;
+
+    const mimeType = b.type || 'video/webm';
+    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
 
     const formData = new FormData();
-    formData.append('video', blob, `q${q.id}_response.${ext}`);
+    formData.append('video', b, `q${q.id}_response.${ext}`);
     formData.append('questionID', q.id);
 
     try {
@@ -194,11 +212,16 @@ export default function InterviewTake() {
         setStage('done');
       }
     } catch (err) {
-      setError('Failed to upload video. Please refresh and try again.');
-      setStage('error');
+      setUploadError(true);
+      setPhase('upload-failed');
     }
   };
 
+  const retryUpload = async () => {
+    setRetrying(true);
+    await uploadRecording(lastBlobRef.current, lastQuestionRef.current);
+    setRetrying(false);
+  };
   // ═══════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════
@@ -358,6 +381,28 @@ export default function InterviewTake() {
             <>
               <p className="iv-question-desc">Uploading your response… please wait.</p>
               <div className="iv-spinner" style={{ marginTop: 16 }}/>
+            </>
+          )}
+
+          {phase === 'upload-failed' && (
+            <>
+              <div className="iv-upload-error">
+                <RiAlertLine size={20}/>
+                <span>Upload failed. Please retry.</span>
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                <button className="iv-btn iv-btn--ghost" onClick={() => {
+                  setPhase('view');
+                  setSecondsLeft(q.question_view_time || 30);
+                  chunksRef.current = [];
+                }}>
+                  Re-record
+                </button>
+                <button className="iv-btn iv-btn--primary" onClick={retryUpload} disabled={retrying}>
+                  <RiSendPlaneLine size={16}/>
+                  {retrying ? 'Retrying…' : 'Retry Upload'}
+                </button>
+              </div>
             </>
           )}
         </section>
