@@ -476,6 +476,8 @@ function CourseBuilder({ course, onBack }) {
   const [tpChapter,  setTpChapter]  = useState(null);
   const [tpEditing,  setTpEditing]  = useState(null);
   const [confirmDlg, setConfirmDlg] = useState(null);
+  const [qsModal,    setQsModal]    = useState(null); // topic for Questions modal
+  const [rlModal,    setRlModal]    = useState(null); // topic for Resource Links modal
   const { toast, show } = useToast();
 
   const loadChapters = useCallback(async () => {
@@ -625,10 +627,20 @@ function CourseBuilder({ course, onBack }) {
                             </div>
                           </div>
                           <div className="ac-topic-actions">
-                            {(t.type === 1 || t.type === 2) && (
-                              <button className="ac-action"
-                                      onClick={() => { setTpChapter(ch); setTpEditing(t); setTpModal(true); }}>
-                                <RiEdit2Line size={11}/>Edit
+                            <button className="ac-action"
+                                    onClick={() => { setTpChapter(ch); setTpEditing(t); setTpModal(true); }}>
+                              <RiEdit2Line size={11}/>Edit
+                            </button>
+                            {t.type === 4 && (
+                              <button className="ac-action ac-action--build"
+                                      onClick={() => { setQsModal(t); }}>
+                                <HiOutlineAcademicCap size={11}/>Questions
+                              </button>
+                            )}
+                            {t.type === 3 && (
+                              <button className="ac-action ac-action--add"
+                                      onClick={() => { setRlModal(t); }}>
+                                <RiLinkM size={11}/>Links
                               </button>
                             )}
                             <button className="ac-action ac-action--danger" onClick={() => askRemoveTopic(t, ch)}>
@@ -657,6 +669,18 @@ function CourseBuilder({ course, onBack }) {
                     onClose={() => setTpModal(false)}
                     onSaved={(msg) => { show(msg); loadChapters(); setTpModal(false); }}
                     onToast={show}/>
+      )}
+      {qsModal && (
+        <TestQuestionsModal
+          topic={qsModal} courseId={course.id}
+          onClose={() => setQsModal(null)}
+          onToast={show}/>
+      )}
+      {rlModal && (
+        <ResourceLinksModal
+          topic={rlModal} courseId={course.id}
+          onClose={() => setRlModal(null)}
+          onToast={show}/>
       )}
       {confirmDlg && (
         <Modal small onClose={() => setConfirmDlg(null)}>
@@ -752,7 +776,8 @@ function TopicModal({ courseId, chapter, editing, onClose, onSaved, onToast }) {
       if (isEdit) {
         if (type === 1) res = await API.post('/Webservice/updateVideoTopic', { ...base, topicID: editing.id, file_url: fileUrl, video_type: vidType, duration: dur });
         else if (type === 2) res = await API.post('/Webservice/updatePDFTopic', { ...base, topicID: editing.id, file_url: fileUrl });
-        else res = await API.post('/Webservice/updateResourceTopic', { ...base, topicID: editing.id });
+        else if (type === 3) res = await API.post('/Webservice/updateResourceTopic', { ...base, topicID: editing.id });
+        else res = await API.post('/Webservice/testDetailUpdate', { ...base, topicID: editing.id, passing_percentage: passing, number_of_attempt: attempts });
       } else {
         if (type === 1) res = await API.post('/Webservice/newVideoTopic', { ...base, file_url: fileUrl, video_type: vidType, duration: dur });
         else if (type === 2) res = await API.post('/Webservice/newPDFTopic', { ...base, file_url: fileUrl });
@@ -845,7 +870,7 @@ function TopicModal({ courseId, chapter, editing, onClose, onSaved, onToast }) {
         {type === 3 && (
           <div className="ac-info-banner">
             <RiQuestionLine size={14}/>
-            <span>Resource link topics let you attach external links. Add links from Course Detail after saving.</span>
+            <span>After saving, use the "Links" button on this topic to add external resource links.</span>
           </div>
         )}
       </div>
@@ -854,6 +879,257 @@ function TopicModal({ courseId, chapter, editing, onClose, onSaved, onToast }) {
         <button className="ac-btn ac-btn--primary" onClick={save} disabled={saving || !name.trim()}>
           <RiCheckLine size={14}/>{saving ? 'Saving…' : isEdit ? 'Update' : 'Add topic'}
         </button>
+      </div>
+    </Modal>
+  );
+}
+
+/* ═══ TEST QUESTIONS MODAL ═══ */
+function TestQuestionsModal({ topic, courseId, onClose, onToast }) {
+  const [questions, setQuestions] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [adding,    setAdding]    = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [newQ,      setNewQ]      = useState({ text: '', point: 1, options: ['', '', '', ''], correct: 0 });
+
+  const loadQ = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/Webservice/getQuestionsListWS', { params: { topicID: topic.id } });
+      if (res.data.code === 1) setQuestions(res.data.data || []);
+    } catch { onToast?.('Could not load questions', 'err'); }
+    setLoading(false);
+  }, [topic.id]);
+
+  useEffect(() => { loadQ(); }, [loadQ]);
+
+  const addQuestion = async () => {
+    if (!newQ.text.trim()) { onToast?.('Question text required'); return; }
+    const filledOpts = newQ.options.filter(o => o.trim());
+    if (filledOpts.length < 2) { onToast?.('At least 2 options are required'); return; }
+    setSaving(true);
+    try {
+      const qRes = await API.post('/Webservice/addTestQuestion', {
+        courseID: courseId, chapterID: topic.chapter_id, topicID: topic.id,
+        question_text: newQ.text.trim(), point: newQ.point,
+      });
+      if (qRes.data.code === 1) {
+        const qID = qRes.data.data.questionID;
+        const opts = newQ.options
+          .filter(o => o.trim())
+          .map((o, i) => ({ option_text: o.trim(), answer: i === newQ.correct ? 1 : 0, value: i === newQ.correct ? newQ.point : 0 }));
+        await API.post('/Webservice/addTestQuestionOptions', { questionID: qID, options: opts });
+        await API.post('/Webservice/sendTestQuestion', { questionID: qID });
+        setNewQ({ text: '', point: 1, options: ['', '', '', ''], correct: 0 });
+        setAdding(false);
+        loadQ();
+      } else { onToast?.(qRes.data.message || 'Failed', 'err'); }
+    } catch { onToast?.('Save failed', 'err'); }
+    setSaving(false);
+  };
+
+  const deleteQ = async (qID) => {
+    try {
+      await API.post('/Webservice/deleteQuestion', { questionID: qID });
+      loadQ();
+    } catch { onToast?.('Delete failed', 'err'); }
+  };
+
+  const setOption = (i, val) => setNewQ(q => { const o = [...q.options]; o[i] = val; return { ...q, options: o }; });
+
+  return (
+    <Modal large onClose={onClose}>
+      <div className="ac-modal-head">
+        <h2 className="ac-modal-title">Questions · {topic.name}</h2>
+        <button className="ac-modal-close" onClick={onClose}><RiCloseLine size={16}/></button>
+      </div>
+      <div className="ac-modal-body">
+        <div className="ac-qs-meta">
+          Pass: {topic.passing_percentage || topic.passingPercentage || 75}% ·
+          Max attempts: {topic.number_of_attempt || topic.numberOfAttempt || 0} (0 = unlimited)
+        </div>
+
+        {loading ? (
+          <div className="ac-state">Loading…</div>
+        ) : (
+          <div className="ac-qs-list">
+            {questions.length === 0 && !adding && (
+              <div className="ac-qs-empty">No questions yet — click "Add question" below.</div>
+            )}
+            {questions.map((q, qi) => (
+              <div key={q.id} className="ac-qs-item">
+                <div className="ac-qs-item-head">
+                  <span className="ac-qs-num">Q{qi + 1}</span>
+                  <span className="ac-qs-text">{q.question_text}</span>
+                  <span className="ac-qs-pts">{q.point} pt</span>
+                  <button className="ac-action ac-action--danger" onClick={() => deleteQ(q.id)}>
+                    <RiDeleteBin6Line size={11}/>
+                  </button>
+                </div>
+                <div className="ac-qs-opts">
+                  {(q.options || []).map((opt, oi) => (
+                    <div key={oi} className={`ac-qs-opt ${opt.answer ? 'ac-qs-opt--correct' : ''}`}>
+                      <span className="ac-qs-opt-dot">{opt.answer ? '✓' : String.fromCharCode(65 + oi)}</span>
+                      {opt.option_text}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {adding && (
+              <div className="ac-qs-add-form">
+                <div className="ac-qs-add-head">New question</div>
+                <Field label="Question text" required>
+                  <textarea className="ac-input" rows={2} autoFocus
+                            value={newQ.text} onChange={e => setNewQ(q => ({ ...q, text: e.target.value }))}
+                            placeholder="Type question here…"/>
+                </Field>
+                <Field label="Points">
+                  <input className="ac-input" type="number" min="1" style={{ width: 90 }}
+                         value={newQ.point} onChange={e => setNewQ(q => ({ ...q, point: Number(e.target.value) }))}/>
+                </Field>
+                <div className="ac-qs-opts-label">Options — select the correct answer</div>
+                {newQ.options.map((opt, i) => (
+                  <div key={i} className="ac-qs-opt-row">
+                    <input type="radio" name="correct" checked={newQ.correct === i}
+                           onChange={() => setNewQ(q => ({ ...q, correct: i }))}/>
+                    <input className="ac-input" value={opt}
+                           onChange={e => setOption(i, e.target.value)}
+                           placeholder={`Option ${String.fromCharCode(65 + i)}`}/>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button className="ac-btn ac-btn--ghost" onClick={() => setAdding(false)} disabled={saving}>Cancel</button>
+                  <button className="ac-btn ac-btn--primary" onClick={addQuestion} disabled={saving || !newQ.text.trim()}>
+                    <RiCheckLine size={13}/>{saving ? 'Saving…' : 'Add question'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="ac-modal-foot">
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{questions.length} question{questions.length !== 1 ? 's' : ''}</span>
+        {!adding && (
+          <button className="ac-btn ac-btn--primary" onClick={() => setAdding(true)}>
+            <RiAddLine size={13}/>Add question
+          </button>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+/* ═══ RESOURCE LINKS MODAL ═══ */
+function ResourceLinksModal({ topic, courseId, onClose, onToast }) {
+  const [links,   setLinks]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [adding,  setAdding]  = useState(false);
+  const [saving,  setSaving]  = useState(false);
+  const [newLink, setNewLink] = useState({ name: '', description: '', link: '' });
+
+  const loadLinks = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/Webservice/getCourseChapterResourceList', { params: { topicID: topic.id } });
+      if (res.data.code === 1) setLinks(res.data.data || []);
+    } catch { onToast?.('Could not load links', 'err'); }
+    setLoading(false);
+  }, [topic.id]);
+
+  useEffect(() => { loadLinks(); }, [loadLinks]);
+
+  const addLink = async () => {
+    if (!newLink.name.trim() || !newLink.link.trim()) { onToast?.('Name and URL are required'); return; }
+    setSaving(true);
+    try {
+      const res = await API.post('/Webservice/addResourceLinks', {
+        courseID: courseId, chapterID: topic.chapter_id, topicID: topic.id,
+        links: [{ name: newLink.name.trim(), description: newLink.description.trim(), link: newLink.link.trim() }],
+      });
+      if (res.data.code === 1) {
+        setNewLink({ name: '', description: '', link: '' });
+        setAdding(false);
+        loadLinks();
+      } else { onToast?.(res.data.message || 'Failed', 'err'); }
+    } catch { onToast?.('Save failed', 'err'); }
+    setSaving(false);
+  };
+
+  const removeLink = async (linkID) => {
+    try {
+      await API.post('/Webservice/removeResourseLink', { linkID });
+      loadLinks();
+    } catch { onToast?.('Remove failed', 'err'); }
+  };
+
+  return (
+    <Modal large onClose={onClose}>
+      <div className="ac-modal-head">
+        <h2 className="ac-modal-title">Resource Links · {topic.name}</h2>
+        <button className="ac-modal-close" onClick={onClose}><RiCloseLine size={16}/></button>
+      </div>
+      <div className="ac-modal-body">
+        {loading ? (
+          <div className="ac-state">Loading…</div>
+        ) : (
+          <div className="ac-qs-list">
+            {links.length === 0 && !adding && (
+              <div className="ac-qs-empty">No links yet — click "Add link" below.</div>
+            )}
+            {links.map((l) => (
+              <div key={l.id} className="ac-rl-item">
+                <div className="ac-rl-icon"><RiLinkM size={14}/></div>
+                <div className="ac-rl-info">
+                  <div className="ac-rl-name">{l.name}</div>
+                  {l.description && <div className="ac-rl-desc">{l.description}</div>}
+                  <a className="ac-rl-url" href={l.link} target="_blank" rel="noopener noreferrer">{l.link}</a>
+                </div>
+                <button className="ac-action ac-action--danger" onClick={() => removeLink(l.id)}>
+                  <RiDeleteBin6Line size={11}/>
+                </button>
+              </div>
+            ))}
+
+            {adding && (
+              <div className="ac-qs-add-form">
+                <div className="ac-qs-add-head">New link</div>
+                <Field label="Link name" required>
+                  <input className="ac-input" autoFocus value={newLink.name}
+                         onChange={e => setNewLink(l => ({ ...l, name: e.target.value }))}
+                         placeholder="e.g. Official Documentation"/>
+                </Field>
+                <Field label="URL" required>
+                  <input className="ac-input" value={newLink.link}
+                         onChange={e => setNewLink(l => ({ ...l, link: e.target.value }))}
+                         placeholder="https://..."/>
+                </Field>
+                <Field label="Description (optional)">
+                  <input className="ac-input" value={newLink.description}
+                         onChange={e => setNewLink(l => ({ ...l, description: e.target.value }))}
+                         placeholder="About this link…"/>
+                </Field>
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <button className="ac-btn ac-btn--ghost" onClick={() => setAdding(false)} disabled={saving}>Cancel</button>
+                  <button className="ac-btn ac-btn--primary" onClick={addLink}
+                          disabled={saving || !newLink.name.trim() || !newLink.link.trim()}>
+                    <RiCheckLine size={13}/>{saving ? 'Saving…' : 'Add link'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="ac-modal-foot">
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{links.length} link{links.length !== 1 ? 's' : ''}</span>
+        {!adding && (
+          <button className="ac-btn ac-btn--primary" onClick={() => setAdding(true)}>
+            <RiAddLine size={13}/>Add link
+          </button>
+        )}
       </div>
     </Modal>
   );
@@ -1006,4 +1282,29 @@ const CSS = `
   .ac-type-grid{grid-template-columns:repeat(2,1fr)}
   .ac-title{font-size:var(--text-3xl)}
 }
+.ac-qs-meta{font-size:11px;color:var(--text-3);font-weight:500;margin-bottom:14px;padding:8px 12px;background:var(--surface-2);border-radius:var(--r-sm)}
+.ac-qs-list{display:flex;flex-direction:column;gap:10px}
+.ac-qs-empty{text-align:center;padding:28px 16px;font-size:var(--text-sm);color:var(--text-3)}
+.ac-qs-item{background:var(--surface-2);border-radius:var(--r-md);padding:12px 14px;border:1px solid var(--border)}
+.ac-qs-item-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.ac-qs-num{flex-shrink:0;font-size:10px;font-weight:700;padding:2px 8px;background:var(--accent-soft);color:var(--accent);border-radius:99px}
+.ac-qs-text{flex:1;font-size:var(--text-base);font-weight:500;color:var(--text);line-height:1.4}
+.ac-qs-pts{font-size:10px;color:var(--text-3);font-weight:600;white-space:nowrap}
+.ac-qs-opts{display:flex;flex-direction:column;gap:4px;margin-left:36px}
+.ac-qs-opt{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);padding:5px 10px;border-radius:var(--r-sm);background:var(--surface)}
+.ac-qs-opt--correct{background:var(--success-soft);color:var(--success);font-weight:600}
+.ac-qs-opt-dot{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;flex-shrink:0;background:var(--surface-3)}
+.ac-qs-opt--correct .ac-qs-opt-dot{background:var(--success);color:#fff}
+.ac-qs-add-form{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:16px}
+.ac-qs-add-head{font-size:var(--text-sm);font-weight:600;color:var(--text);margin-bottom:12px}
+.ac-qs-opts-label{font-size:var(--text-xs);font-weight:600;color:var(--text-2);margin-bottom:6px}
+.ac-qs-opt-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.ac-qs-opt-row input[type=radio]{flex-shrink:0;accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
+.ac-rl-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);border:1px solid var(--border)}
+.ac-rl-icon{width:30px;height:30px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex-shrink:0;margin-top:2px}
+.ac-rl-info{flex:1;min-width:0}
+.ac-rl-name{font-size:var(--text-base);font-weight:600;color:var(--text);margin-bottom:2px}
+.ac-rl-desc{font-size:11px;color:var(--text-3);margin-bottom:4px}
+.ac-rl-url{font-size:11px;color:var(--info);word-break:break-all}
+.ac-rl-url:hover{text-decoration:underline}
 `;
