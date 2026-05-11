@@ -919,7 +919,7 @@ export default function Interview() {
   const [search,     setSearch]     = useState('');
   const [loading,    setLoading]    = useState(true);
   const [selInv,     setSelInv]     = useState(null);
-  const [activeTab,  setActiveTab]  = useState('learner');
+  const [activeTab,  setActiveTab]  = useState('admin');
   const [showAdd,    setShowAdd]    = useState(false);
   const [editInv,    setEditInv]    = useState(null);
   const [qMgrInv,    setQMgrInv]    = useState(null);
@@ -1007,21 +1007,7 @@ export default function Interview() {
         </div>
       )}
 
-      {/* Tabs */}
-      {isAdmin && (
-        <div className="iv-tabs iv-tabs--page">
-          {[
-            { key: 'learner', label: 'My interviews' },
-            { key: 'admin',   label: 'Admin panel' },
-          ].map(t => (
-            <button key={t.key}
-                    className={`iv-tab ${activeTab === t.key ? 'iv-tab--active' : ''}`}
-                    onClick={() => setActiveTab(t.key)}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Tabs removed — always show Admin panel */}
 
       {/* Toolbar */}
       <div className="iv-toolbar">

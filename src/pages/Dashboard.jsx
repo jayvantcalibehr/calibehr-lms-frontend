@@ -9,7 +9,7 @@ import {
 } from 'react-icons/ri';
 import API from '../api/axios';
 import AppShell from '../components/AppShell';
-import { isAdmin } from '../utils/permissions';
+import { isAdmin, can } from '../utils/permissions';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -87,11 +87,11 @@ export default function Dashboard() {
   ];
 
   const QUICK = [
-    { Icon: RiBookOpenLine, label: 'Browse Courses', sub: 'Explore catalog',     path: '/courses',     c1: '#6366F1', c2: '#8B5CF6' },
-    { Icon: RiAwardLine,    label: 'Take a Quiz',    sub: 'Test your knowledge', path: '/quiz',        c1: '#10B981', c2: '#059669' },
-    { Icon: RiVideoLine,    label: 'Interview Prep', sub: 'Practice rounds',     path: '/interview',   c1: '#EC4899', c2: '#F43F5E' },
-    { Icon: RiTrophyLine,   label: 'Leaderboard',    sub: 'See your rank',       path: '/leaderboard', c1: '#FBBF24', c2: '#F59E0B' },
-  ];
+    { Icon: RiBookOpenLine, label: 'Browse Courses', sub: 'Explore catalog',     path: '/courses',     c1: '#6366F1', c2: '#8B5CF6', show: true },
+    { Icon: RiAwardLine,    label: 'Take a Quiz',    sub: 'Test your knowledge', path: '/quiz',        c1: '#10B981', c2: '#059669', show: can('quiz.manage') || can('quiz.review') },
+    { Icon: RiVideoLine,    label: 'Interview Prep', sub: 'Practice rounds',     path: '/interview',   c1: '#EC4899', c2: '#F43F5E', show: can('interview.manage') || can('interview.review') },
+    { Icon: RiTrophyLine,   label: 'Leaderboard',    sub: 'See your rank',       path: '/leaderboard', c1: '#FBBF24', c2: '#F59E0B', show: true },
+  ].filter(q => q.show);
 
   const PODIUM = [
     { rank: 1, label: '1st', icon: RiTrophyFill, c1: '#FBBF24', c2: '#F59E0B' },
