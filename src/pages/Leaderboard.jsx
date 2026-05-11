@@ -7,7 +7,7 @@ import API from '../api/axios';
 import AppShell from '../components/AppShell';
 
 export default function Leaderboard() {
-  const [tab,     setTab]     = useState('global'); // 'global' | 'dept'
+  const [tab,     setTab]     = useState('global'); // 'global' | 'dept' | 'mydept'
   const [data,    setData]    = useState([]);
   const [deptData,setDeptData]= useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +26,10 @@ export default function Leaderboard() {
     } catch {}
     setLoading(false);
   };
+
+  // My department = filter global data by same emp_department as logged in user
+  const myDeptData = data.filter(d => d.emp_department && me.department && 
+    String(d.emp_department) === String(me.department));
 
   const myRank = data.findIndex(d => d.emp_code === me.emp_code) + 1;
   const top3   = data.slice(0, 3);
@@ -91,15 +95,19 @@ export default function Leaderboard() {
         <button className={`lb-tab ${tab === 'global' ? 'lb-tab--active' : ''}`} onClick={() => setTab('global')}>
           <RiTrophyLine size={14}/> Global Ranking
         </button>
+        <button className={`lb-tab ${tab === 'mydept' ? 'lb-tab--active' : ''}`} onClick={() => setTab('mydept')}>
+          <RiTeamLine size={14}/> My Department
+        </button>
         <button className={`lb-tab ${tab === 'dept' ? 'lb-tab--active' : ''}`} onClick={() => setTab('dept')}>
-          <RiTeamLine size={14}/> By Department
+          <RiTeamLine size={14}/> All Departments
         </button>
       </div>
 
       {tab === 'dept' ? (
         <DeptLeaderboard data={deptData} loading={loading}/>
+      ) : tab === 'mydept' ? (
+        <MyDeptLeaderboard data={myDeptData} loading={loading} me={me}/>
       ) : (
-        <>
         {loading ? (
         <div className="lb-state">Loading the board…</div>
       ) : data.length === 0 ? (
@@ -249,6 +257,75 @@ function PodiumItem({ person, rank }) {
         <div className="pod-bar-rank">{rank}</div>
       </div>
     </div>
+  );
+}
+
+/* ── My Department Leaderboard ── */
+function MyDeptLeaderboard({ data, loading, me }) {
+  if (loading) return <div className="lb-state">Loading…</div>;
+
+  const deptName = data[0]?.dept_name || data[0]?.emp_department_name || '';
+
+  if (data.length === 0) return (
+    <div className="lb-state lb-empty">
+      <div className="lb-empty-icon"><RiTeamLine size={28}/></div>
+      <div className="lb-empty-title">No department data</div>
+      <div className="lb-empty-sub">No colleagues found in your department on the leaderboard yet.</div>
+    </div>
+  );
+
+  return (
+    <article className="lb-card">
+      <header className="lb-card-head">
+        <div>
+          <h2 className="lb-card-title">My Department Rankings</h2>
+          <p className="lb-card-sub">{deptName ? `${deptName} · ` : ''}Sorted by points earned</p>
+        </div>
+      </header>
+      <div className="lb-thead">
+        <span style={{ width: 56, textAlign: 'center' }}>Rank</span>
+        <span style={{ flex: 1 }}>Learner</span>
+        <span className="lb-col-courses">Courses</span>
+        <span style={{ width: 90, textAlign: 'right' }}>Points</span>
+      </div>
+      <ul className="lb-rows">
+        {data.map((d, i) => {
+          const isMe   = d.emp_code === me.emp_code;
+          const points = d.total_points ?? d.points ?? 0;
+          const initials = (d.emp_first_name || 'U')[0].toUpperCase();
+          return (
+            <li key={d.id || i} className={`lb-row ${isMe ? 'lb-row--me' : ''}`}
+                style={{ animationDelay: `${Math.min(i * 30, 600)}ms` }}>
+              <span className="lb-rank-cell">
+                {i < 3
+                  ? <span className={`lb-medal lb-medal--${i+1}`}>
+                      {i === 0 ? <RiTrophyFill size={20}/> : <RiMedalFill size={18}/>}
+                    </span>
+                  : <span className="lb-num">{i + 1}</span>}
+              </span>
+              <div className="lb-user">
+                <div className={`lb-avatar lb-avatar--${i < 3 ? ['gold','silver','bronze'][i] : (isMe ? 'me' : 'default')}`}>
+                  {d.emp_photo && d.emp_photo.trim()
+                    ? <img src={d.emp_photo.startsWith('http') ? d.emp_photo : `${import.meta.env.VITE_API_URL || ''}${d.emp_photo}`}
+                           alt={d.emp_first_name} onError={e => { e.target.style.display='none'; }}/>
+                    : null}
+                  <span>{initials}</span>
+                </div>
+                <div>
+                  <div className="lb-name">
+                    {d.emp_first_name} {d.emp_last_name}
+                    {isMe && <span className="lb-you">You</span>}
+                  </div>
+                  <div className="lb-code">{d.emp_code}</div>
+                </div>
+              </div>
+              <span className="lb-col-courses lb-courses-val">{d.completed_courses ?? d.courses_completed ?? 0}</span>
+              <span className="lb-points">{points.toLocaleString()}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </article>
   );
 }
 
