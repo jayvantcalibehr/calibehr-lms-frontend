@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import {
   RiTrophyLine, RiMedalLine, RiTrophyFill, RiMedalFill,
-  RiStarFill, RiBookOpenLine, RiFireFill,
+  RiStarFill, RiBookOpenLine, RiFireFill, RiTeamLine,
 } from 'react-icons/ri';
 import API from '../api/axios';
 import AppShell from '../components/AppShell';
 
 export default function Leaderboard() {
+  const [tab,     setTab]     = useState('global'); // 'global' | 'dept'
   const [data,    setData]    = useState([]);
+  const [deptData,setDeptData]= useState([]);
   const [loading, setLoading] = useState(true);
   const me = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -15,8 +17,12 @@ export default function Leaderboard() {
 
   const load = async () => {
     try {
-      const res = await API.get('/Webservice/getLeaderBoardWS');
-      if (res.data.code === 1) setData(res.data.data || []);
+      const [gRes, dRes] = await Promise.all([
+        API.get('/Webservice/getLeaderBoardWS'),
+        API.get('/Webservice/getDepartmentLeaderBoardWS'),
+      ]);
+      if (gRes.data.code === 1) setData(gRes.data.data || []);
+      if (dRes.data.code === 1) setDeptData(dRes.data.data || []);
     } catch {}
     setLoading(false);
   };
@@ -80,7 +86,21 @@ export default function Leaderboard() {
         </div>
       )}
 
-      {loading ? (
+      {/* Tab switcher */}
+      <div className="lb-tabs">
+        <button className={`lb-tab ${tab === 'global' ? 'lb-tab--active' : ''}`} onClick={() => setTab('global')}>
+          <RiTrophyLine size={14}/> Global Ranking
+        </button>
+        <button className={`lb-tab ${tab === 'dept' ? 'lb-tab--active' : ''}`} onClick={() => setTab('dept')}>
+          <RiTeamLine size={14}/> By Department
+        </button>
+      </div>
+
+      {tab === 'dept' ? (
+        <DeptLeaderboard data={deptData} loading={loading}/>
+      ) : (
+        <>
+        {loading ? (
         <div className="lb-state">Loading the board…</div>
       ) : data.length === 0 ? (
         <div className="lb-state lb-empty">
@@ -175,6 +195,8 @@ export default function Leaderboard() {
           </article>
         </>
       )}
+        </>
+      )}
     </AppShell>
   );
 }
@@ -227,6 +249,84 @@ function PodiumItem({ person, rank }) {
         <div className="pod-bar-rank">{rank}</div>
       </div>
     </div>
+  );
+}
+
+/* ── Department Leaderboard ── */
+function DeptLeaderboard({ data, loading }) {
+  const [deptNames, setDeptNames] = useState({});
+
+  useEffect(() => {
+    // fetch department list to map ID → name
+    (async () => {
+      try {
+        const res = await API.get('/Webservice/getDepartmentList');
+        if (res.data.code === 1) {
+          // response: [{id, name}] or [{name}] — build map by id and by index
+          const map = {};
+          (res.data.data || []).forEach(d => {
+            if (d.id) map[String(d.id)] = d.name;
+            if (d.dept_id) map[String(d.dept_id)] = d.name;
+            if (d.DeptId) map[String(d.DeptId)] = d.name;
+          });
+          setDeptNames(map);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const getDeptName = (d) => d.dept_name || `Dept ${d.emp_department}`;
+
+  if (loading) return <div className="lb-state">Loading departments…</div>;
+  if (data.length === 0) return (
+    <div className="lb-state lb-empty">
+      <div className="lb-empty-icon"><RiTeamLine size={28}/></div>
+      <div className="lb-empty-title">No department data yet</div>
+      <div className="lb-empty-sub">Department rankings appear once learners earn points.</div>
+    </div>
+  );
+  return (
+    <article className="lb-card">
+      <header className="lb-card-head">
+        <div>
+          <h2 className="lb-card-title">Department Rankings</h2>
+          <p className="lb-card-sub">Sorted by total points earned across all learners</p>
+        </div>
+      </header>
+      <div className="lb-thead">
+        <span style={{ width: 56, textAlign: 'center' }}>Rank</span>
+        <span style={{ flex: 1 }}>Department</span>
+        <span style={{ width: 100, textAlign: 'center' }}>Learners</span>
+        <span style={{ width: 110, textAlign: 'center' }}>Completions</span>
+        <span style={{ width: 90, textAlign: 'right' }}>Points</span>
+      </div>
+      <ul className="lb-rows">
+        {data.map((d, i) => (
+          <li key={i} className="lb-row" style={{ animationDelay: `${Math.min(i * 30, 600)}ms` }}>
+            <span className="lb-rank-cell">
+              {i < 3
+                ? <span className={`lb-medal lb-medal--${i+1}`}>
+                    {i === 0 ? <RiTrophyFill size={20}/> : <RiMedalFill size={18}/>}
+                  </span>
+                : <span className="lb-num">{i + 1}</span>}
+            </span>
+            <div className="lb-user" style={{ flex: 1 }}>
+              <div className="lb-dept-icon"><RiTeamLine size={16}/></div>
+              <div>
+                <div className="lb-name">{getDeptName(d)}</div>
+              </div>
+            </div>
+            <span style={{ width: 100, textAlign: 'center', fontSize: 13, color: 'var(--text-2)', fontWeight: 600 }}>
+              {d.total_learners ?? 0}
+            </span>
+            <span style={{ width: 110, textAlign: 'center', fontSize: 13, color: 'var(--text-2)', fontWeight: 600 }}>
+              {d.completions ?? 0}
+            </span>
+            <span className="lb-points">{Number(d.total_points || 0).toLocaleString()}</span>
+          </li>
+        ))}
+      </ul>
+    </article>
   );
 }
 
@@ -593,5 +693,27 @@ const CSS = `
 @media (max-width: 480px) {
   .pod-avatar { width: 44px; height: 44px; font-size: 16px; }
   .pod--1 .pod-avatar { width: 56px; height: 56px; font-size: 20px; }
+}
+/* Tabs */
+.lb-tabs {
+  display: flex; gap: 4px; margin-bottom: var(--s-4);
+  background: var(--surface); border-radius: var(--r-md);
+  padding: 4px; box-shadow: var(--ring);
+  width: fit-content;
+}
+.lb-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: var(--r-sm);
+  border: none; cursor: pointer;
+  font-family: inherit; font-size: var(--text-sm); font-weight: 600;
+  color: var(--text-3); background: transparent;
+  transition: all var(--duration-fast) var(--ease);
+}
+.lb-tab:hover { color: var(--text); background: var(--surface-2); }
+.lb-tab--active { background: var(--accent); color: var(--accent-text); }
+.lb-dept-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent);
+  display: grid; place-items: center; flex-shrink: 0;
 }
 `;

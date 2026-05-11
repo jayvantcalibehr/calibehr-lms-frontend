@@ -39,6 +39,8 @@ export default function QuizTake() {
   const [quiz,      setQuiz]      = useState(null);
   const [questions, setQuestions] = useState([]);
   const [invite,    setInvite]    = useState(null);
+  const [infoQs,    setInfoQs]    = useState([]);   // information questions before quiz
+  const [infoAnswers, setInfoAnswers] = useState({});
 
   // -- Attempt state --
   const [answers,   setAnswers]   = useState({});
@@ -64,7 +66,18 @@ export default function QuizTake() {
           setQuiz(data.quiz);
           setQuestions(data.questions || []);
           setInvite(data.invite);
-          setStage('ready');
+          // fetch info questions
+          try {
+            const iRes = await publicAPI.get(`/quiz/info-questions`, { params: { quizID: data.quiz.id } });
+            if (iRes.data.code === 1 && (iRes.data.data || []).length > 0) {
+              setInfoQs(iRes.data.data);
+              setStage('info'); // show info questions first
+            } else {
+              setStage('ready');
+            }
+          } catch {
+            setStage('ready'); // fallback to ready if info fetch fails
+          }
         } else if (code === 2) {
           setStage('completed');
           setError(message || 'You have already completed this quiz.');
@@ -154,6 +167,38 @@ export default function QuizTake() {
 
   // ─── Render branches ──────────────────────────────────────────
   if (stage === 'loading') return <PageShell><Spinner label="Loading your quiz…" /></PageShell>;
+
+  // stage === 'info' — information questions before quiz
+  if (stage === 'info') return (
+    <PageShell>
+      <div className="qt-landing">
+        <div className="qt-landing-icon"><RiInformationLine size={44}/></div>
+        <h1 className="qt-landing-title">Before you begin</h1>
+        <p className="qt-landing-desc">Please fill in the following information before starting the quiz.</p>
+        <div style={{ textAlign: 'left', marginBottom: 24 }}>
+          {infoQs.map((q, i) => (
+            <div key={q.id} style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: 14, marginBottom: 6 }}>
+                {i + 1}. {q.question_text || q.question}
+              </label>
+              <input
+                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e7e5e4', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+                value={infoAnswers[q.id] || ''}
+                onChange={e => setInfoAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                placeholder="Your answer…"
+                onFocus={e => e.target.style.borderColor = '#10b981'}
+                onBlur={e => e.target.style.borderColor = '#e7e5e4'}
+              />
+            </div>
+          ))}
+        </div>
+        <button className="qt-start-btn" onClick={() => setStage('ready')}>
+          Continue to Quiz
+        </button>
+      </div>
+      <Styles/>
+    </PageShell>
+  );
 
   if (stage === 'error') return (
     <PageShell>

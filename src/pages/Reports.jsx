@@ -3,7 +3,7 @@ import {
   RiDownload2Line, RiBookOpenLine, RiAwardLine, RiUser3Line,
   RiGridLine, RiFileTextLine, RiFilterLine, RiChat3Line,
   RiInformationLine, RiAlertLine, RiLoader4Line, RiArrowDownSLine,
-  RiCloseLine, RiSearchLine, RiCheckLine,
+  RiCloseLine, RiSearchLine, RiCheckLine, RiVideoLine,
 } from 'react-icons/ri';
 import API from '../api/axios';
 import AppShell from '../components/AppShell';
@@ -293,10 +293,10 @@ function QuizReport({ quizzes, companies, onToast }) {
                       placeholder="— Select quiz —"
                       options={quizzes.map(q => ({ value: q.id, label: q.title || q.name }))}/>
       </Field>
-      <Field label="Companies">
+      {/* <Field label="Companies">
         <MultiSelect options={companies} value={companyList} onChange={setCompanyList}
                      placeholder="All companies"/>
-      </Field>
+      </Field> */}
 
       {quizID && (
         <button className="rpt-count-btn" onClick={getCount} disabled={counting}>
@@ -337,6 +337,43 @@ function FeedbackReport({ courses, onToast }) {
   );
 }
 
+/* ─────── INTERVIEW REPORT ─────── */
+function InterviewReport({ onToast }) {
+  const [interviews, setInterviews] = useState([]);
+  const [interviewID, setInterviewID] = useState('');
+  const [loading, setLoading] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await API.get('/Webservice/getInterviewDetails');
+        if (res.data.code === 1) setInterviews(res.data.data || []);
+      } catch {}
+    })();
+  }, []);
+
+  const download = async (type) => {
+    setLoading(type);
+    const ext = type === 'excel' ? 'xlsx' : 'pdf';
+    const filename = `Interview_Report_${new Date().toLocaleDateString('en-IN').replace(/\//g, '-')}.${ext}`;
+    try { await downloadFile(`/reports/interview/${type}`, { interviewID }, filename); }
+    catch { onToast?.('Download failed. Please try again.'); }
+    setLoading('');
+  };
+
+  // return (
+  //   <ReportCard icon={<RiVideoLine size={18}/>} iconC1="#06B6D4" iconC2="#0891B2"
+  //               title="Interview report" desc="Video interview submissions and response tracking">
+  //     <Field label="Interview">
+  //       <SingleSelect value={interviewID} onChange={setInterviewID}
+  //                     placeholder="All interviews"
+  //                     options={interviews.map(i => ({ value: i.id, label: i.name }))}/>
+  //     </Field>
+  //     <DownloadButtons loading={loading} onDownload={download}/>
+  //   </ReportCard>
+  // );
+}
+
 /* ─────── LEARNER REPORT ─────── */
 function LearnerReport({ companies, departments, onToast }) {
   const [companyList, setCompanyList] = useState([]);
@@ -365,30 +402,30 @@ function LearnerReport({ companies, departments, onToast }) {
     setLoading('');
   };
 
-  return (
-    <ReportCard icon={<RiUser3Line size={18}/>} iconC1="#06B6D4" iconC2="#0EA5E9"
-                title="Learner report" desc="Individual learner progress across all courses" wide>
-      <div className="rpt-fields rpt-fields--2">
-        <Field label="Companies">
-          <MultiSelect options={companies} value={companyList}
-                       onChange={(v) => { setCompanyList(v); setCount(null); }}
-                       placeholder="All companies"/>
-        </Field>
-        <Field label="Departments">
-          <MultiSelect options={departments} value={deptList}
-                       onChange={(v) => { setDeptList(v); setCount(null); }}
-                       placeholder="All departments"/>
-        </Field>
-      </div>
+  // return (
+  //   <ReportCard icon={<RiUser3Line size={18}/>} iconC1="#06B6D4" iconC2="#0EA5E9"
+  //               title="Learner report" desc="Individual learner progress across all courses" wide>
+  //     <div className="rpt-fields rpt-fields--2">
+  //       <Field label="Companies">
+  //         <MultiSelect options={companies} value={companyList}
+  //                      onChange={(v) => { setCompanyList(v); setCount(null); }}
+  //                      placeholder="All companies"/>
+  //       </Field>
+  //       <Field label="Departments">
+  //         <MultiSelect options={departments} value={deptList}
+  //                      onChange={(v) => { setDeptList(v); setCount(null); }}
+  //                      placeholder="All departments"/>
+  //       </Field>
+  //     </div>
 
-      <button className="rpt-count-btn" onClick={getCount} disabled={counting}>
-        <RiFilterLine size={13}/>
-        {counting ? 'Counting…' : count !== null ? `${count.toLocaleString('en-IN')} records found` : 'Preview count'}
-      </button>
+  //     <button className="rpt-count-btn" onClick={getCount} disabled={counting}>
+  //       <RiFilterLine size={13}/>
+  //       {counting ? 'Counting…' : count !== null ? `${count.toLocaleString('en-IN')} records found` : 'Preview count'}
+  //     </button>
 
-      <DownloadButtons loading={loading} onDownload={download}/>
-    </ReportCard>
-  );
+  //     <DownloadButtons loading={loading} onDownload={download}/>
+  //   </ReportCard>
+  // );
 }
 
 /* ─────── MATRIX REPORT (THE BIG ONE — like old code) ─────── */
@@ -551,6 +588,7 @@ export default function Reports() {
         <CourseReport   courses={courses}   companies={companies} departments={departments} onToast={show}/>
         <QuizReport     quizzes={quizzes}   companies={companies} onToast={show}/>
         <FeedbackReport courses={courses}   onToast={show}/>
+        <InterviewReport onToast={show}/>
       </div>
 
       <div className="rpt-spacer"/>

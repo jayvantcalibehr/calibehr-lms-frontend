@@ -12,7 +12,7 @@ import {
   RiArrowDownSLine, RiArrowRightSLine, RiEyeLine, RiEyeOffLine,
   RiPlayFill, RiFileTextLine, RiLinkM, RiDeleteBin6Line, RiArrowLeftLine,
   RiGlobalLine, RiLockLine, RiFlashlightLine, RiBookOpenLine, RiAlertLine,
-  RiInboxLine, RiQuestionLine,
+  RiInboxLine, RiQuestionLine, RiStarLine, RiUserAddLine, RiUserLine,
 } from 'react-icons/ri';
 import { HiOutlineAcademicCap } from 'react-icons/hi2';
 import API from '../../api/axios';
@@ -99,6 +99,7 @@ function CourseList({ onOpenBuilder }) {
   const [showForm,   setShowForm]   = useState(false);
   const [editing,    setEditing]    = useState(null);
   const [confirmDlg, setConfirmDlg] = useState(null);
+  const [assignModal,setAssignModal]= useState(null); // course for learner assignment
   const { toast, show } = useToast();
 
   const loadAll = useCallback(async () => {
@@ -141,6 +142,19 @@ function CourseList({ onOpenBuilder }) {
     type: 'disable', course: c, title: 'Disable course?',
     msg: `"${c.name}" will be hidden from all learners.`, danger: true,
   });
+
+  const toggleFeatured = async (c) => {
+    try {
+      if (c.featured) {
+        await API.post('/Webservice/removeFromFeature', { courseID: c.id });
+        show('Removed from featured');
+      } else {
+        await API.post('/Webservice/addToFeaturedCourse', { courseID: c.id });
+        show('Added to featured!');
+      }
+      loadAll();
+    } catch { show('Action failed', 'err'); }
+  };
 
   const confirmAction = async () => {
     if (!confirmDlg) return;
@@ -288,6 +302,14 @@ function CourseList({ onOpenBuilder }) {
                     <button className="ac-action ac-action--build" onClick={() => onOpenBuilder(c)}>
                       <RiFlashlightLine size={11}/>Builder
                     </button>
+                    <button className={`ac-action ${c.featured ? 'ac-action--featured-on' : 'ac-action--featured'}`}
+                            onClick={() => toggleFeatured(c)}
+                            title={c.featured ? 'Remove from featured' : 'Add to featured'}>
+                      <RiStarLine size={11}/>{c.featured ? 'Featured' : 'Feature'}
+                    </button>
+                    <button className="ac-action ac-action--add" onClick={() => setAssignModal(c)}>
+                      <RiUserAddLine size={11}/>Assign
+                    </button>
                     {c.status === 1 && (
                       <button className="ac-action ac-action--publish" onClick={() => askPublish(c)}>
                         <RiFlashlightLine size={11}/>Publish
@@ -309,6 +331,10 @@ function CourseList({ onOpenBuilder }) {
             </tbody>
           </table>
         </article>
+      )}
+
+      {assignModal && (
+        <AssignLearnersModal course={assignModal} onClose={() => setAssignModal(null)} onToast={show}/>
       )}
 
       {showForm && (
@@ -1135,6 +1161,105 @@ function ResourceLinksModal({ topic, courseId, onClose, onToast }) {
   );
 }
 
+/* ═══ ASSIGN LEARNERS MODAL ═══ */
+function AssignLearnersModal({ course, onClose, onToast }) {
+  const [users,    setUsers]    = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [selected, setSelected] = useState([]);
+  const [saving,   setSaving]   = useState(false);
+  const [search,   setSearch]   = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await API.get('/Webservice/assignLearnersModalList', { params: { courseID: course.id } });
+        if (res.data.code === 1) setUsers(res.data.data || []);
+      } catch { onToast?.('Could not load users', 'err'); }
+      setLoading(false);
+    })();
+  }, [course.id]);
+
+  const toggle = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+  const toggleAll = () => {
+    const visible = filtered.map(u => u.id);
+    const allSel = visible.every(id => selected.includes(id));
+    setSelected(s => allSel ? s.filter(id => !visible.includes(id)) : [...new Set([...s, ...visible])]);
+  };
+
+  const filtered = users.filter(u => {
+    const q = search.toLowerCase();
+    return !q || (u.emp_first_name + ' ' + u.emp_last_name + ' ' + u.emp_code + ' ' + (u.emp_department || '')).toLowerCase().includes(q);
+  });
+
+  const save = async () => {
+    if (!selected.length) { onToast?.('Select at least one learner'); return; }
+    setSaving(true);
+    try {
+      const res = await API.post('/Webservice/assignLearnersCourse', { courseID: course.id, learners: selected });
+      if (res.data.code === 1) { onToast?.(`${selected.length} learner(s) assigned!`); onClose(); }
+      else onToast?.(res.data.message || 'Failed', 'err');
+    } catch { onToast?.('Assignment failed', 'err'); }
+    setSaving(false);
+  };
+
+  const allVisibleSel = filtered.length > 0 && filtered.every(u => selected.includes(u.id));
+
+  return (
+    <Modal large onClose={onClose}>
+      <div className="ac-modal-head">
+        <h2 className="ac-modal-title">Assign Learners · {course.name}</h2>
+        <button className="ac-modal-close" onClick={onClose}><RiCloseLine size={16}/></button>
+      </div>
+      <div className="ac-modal-body" style={{ padding: '12px 20px' }}>
+        <div className="ac-search" style={{ marginBottom: 12, maxWidth: '100%' }}>
+          <RiSearchLine size={14}/>
+          <input placeholder="Search by name, code, department…" value={search}
+                 onChange={e => setSearch(e.target.value)}/>
+          {search && <button className="ac-search-clear" onClick={() => setSearch('')}><RiCloseLine size={13}/></button>}
+        </div>
+        {loading ? (
+          <div className="ac-state">Loading unenrolled users…</div>
+        ) : filtered.length === 0 ? (
+          <div className="ac-qs-empty">{search ? 'No matches.' : 'All users are already enrolled.'}</div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', marginBottom: 8, borderBottom: '1px solid var(--border)' }}>
+              <input type="checkbox" checked={allVisibleSel} onChange={toggleAll} style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}/>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>
+                Select all visible ({filtered.length}) · {selected.length} selected
+              </span>
+            </div>
+            <div style={{ maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {filtered.map(u => {
+                const sel = selected.includes(u.id);
+                return (
+                  <label key={u.id} className={`ac-assign-row ${sel ? 'ac-assign-row--sel' : ''}`}>
+                    <input type="checkbox" checked={sel} onChange={() => toggle(u.id)} style={{ accentColor: 'var(--accent)', width: 15, height: 15, flexShrink: 0 }}/>
+                    <div className="ac-assign-avatar">
+                      {u.emp_photo ? <img src={u.emp_photo} alt=""/> : <span>{(u.emp_first_name || '?')[0].toUpperCase()}</span>}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{u.emp_first_name} {u.emp_last_name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{u.emp_code}{u.emp_department ? ` · ${u.emp_department}` : ''}</div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+      <div className="ac-modal-foot">
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{selected.length} selected</span>
+        <button className="ac-btn ac-btn--ghost" onClick={onClose} disabled={saving}>Cancel</button>
+        <button className="ac-btn ac-btn--primary" onClick={save} disabled={saving || !selected.length}>
+          <RiUserAddLine size={13}/>{saving ? 'Assigning…' : `Assign ${selected.length > 0 ? selected.length : ''}`}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 /* ═══ STYLES (compact) ═══ */
 const CSS = `
 .ac-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:var(--s-4);margin-bottom:var(--s-5);flex-wrap:wrap;animation:acFadeUp 600ms var(--ease-out)}
@@ -1274,6 +1399,14 @@ const CSS = `
 .ac-type-label{font-size:11px;font-weight:600;color:var(--text-2);letter-spacing:-0.005em}
 .ac-type-btn--active .ac-type-label{color:var(--text)}
 .ac-info-banner{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--info-soft);color:var(--info);border-radius:var(--r-md);font-size:11px;font-weight:500;line-height:1.5;margin-top:8px}
+.ac-action--featured{background:var(--surface-2);color:var(--text-3);border-color:var(--border)}
+.ac-action--featured:hover{background:color-mix(in srgb,#FBBF24 12%,transparent);color:#D97706;border-color:color-mix(in srgb,#FBBF24 35%,transparent)}
+.ac-action--featured-on{background:color-mix(in srgb,#FBBF24 15%,transparent);color:#D97706;border-color:color-mix(in srgb,#FBBF24 40%,transparent)}
+.ac-assign-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;transition:background var(--duration-fast) var(--ease)}
+.ac-assign-row:hover{background:var(--surface-2)}
+.ac-assign-row--sel{background:var(--accent-soft)}
+.ac-assign-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-hover));color:var(--accent-text);display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0;overflow:hidden}
+.ac-assign-avatar img{width:100%;height:100%;object-fit:cover}
 @keyframes acFadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media (max-width:780px){
   .ac-stats{grid-template-columns:repeat(2,1fr)}
