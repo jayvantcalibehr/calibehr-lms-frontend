@@ -1168,6 +1168,8 @@ function AssignLearnersModal({ course, onClose, onToast }) {
   const [selected, setSelected] = useState([]);
   const [saving,   setSaving]   = useState(false);
   const [search,   setSearch]   = useState('');
+  const [page,     setPage]     = useState(1);
+  const PAGE_SIZE = 50;
 
   useEffect(() => {
     (async () => {
@@ -1179,17 +1181,24 @@ function AssignLearnersModal({ course, onClose, onToast }) {
     })();
   }, [course.id]);
 
+  // Reset page when search changes
+  useEffect(() => { setPage(1); }, [search]);
+
   const toggle = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
-  const toggleAll = () => {
-    const visible = filtered.map(u => u.id);
-    const allSel = visible.every(id => selected.includes(id));
-    setSelected(s => allSel ? s.filter(id => !visible.includes(id)) : [...new Set([...s, ...visible])]);
-  };
 
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
     return !q || (u.emp_first_name + ' ' + u.emp_last_name + ' ' + u.emp_code + ' ' + (u.emp_department || '')).toLowerCase().includes(q);
   });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const toggleAll = () => {
+    const visible = paginated.map(u => u.id);
+    const allSel = visible.every(id => selected.includes(id));
+    setSelected(s => allSel ? s.filter(id => !visible.includes(id)) : [...new Set([...s, ...visible])]);
+  };
 
   const save = async () => {
     if (!selected.length) { onToast?.('Select at least one learner'); return; }
@@ -1202,7 +1211,7 @@ function AssignLearnersModal({ course, onClose, onToast }) {
     setSaving(false);
   };
 
-  const allVisibleSel = filtered.length > 0 && filtered.every(u => selected.includes(u.id));
+  const allVisibleSel = paginated.length > 0 && paginated.every(u => selected.includes(u.id));
 
   return (
     <Modal large onClose={onClose}>
@@ -1223,14 +1232,25 @@ function AssignLearnersModal({ course, onClose, onToast }) {
           <div className="ac-qs-empty">{search ? 'No matches.' : 'All users are already enrolled.'}</div>
         ) : (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', marginBottom: 8, borderBottom: '1px solid var(--border)' }}>
-              <input type="checkbox" checked={allVisibleSel} onChange={toggleAll} style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}/>
-              <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>
-                Select all visible ({filtered.length}) · {selected.length} selected
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', marginBottom: 8, borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="checkbox" checked={allVisibleSel} onChange={toggleAll} style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}/>
+                <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>
+                  Select page ({paginated.length}) · {selected.length} selected · {filtered.length} total
+                </span>
+              </div>
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                  <button className="ac-btn ac-btn--ghost" style={{ padding: '3px 8px', fontSize: 11 }}
+                          onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>←</button>
+                  <span style={{ color: 'var(--text-3)' }}>{page}/{totalPages}</span>
+                  <button className="ac-btn ac-btn--ghost" style={{ padding: '3px 8px', fontSize: 11 }}
+                          onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>→</button>
+                </div>
+              )}
             </div>
             <div style={{ maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {filtered.map(u => {
+              {paginated.map(u => {
                 const sel = selected.includes(u.id);
                 return (
                   <label key={u.id} className={`ac-assign-row ${sel ? 'ac-assign-row--sel' : ''}`}>
