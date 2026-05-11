@@ -38,7 +38,6 @@ function QuizFormModal({ quiz, onClose, onSaved, onToast }) {
     } catch { onToast?.('Failed to save.'); }
     setSaving(false);
   };
-
   return (
     <Modal onClose={() => !saving && onClose()}>
       <div className="qz-modal-head">
