@@ -108,6 +108,7 @@ export default function Leaderboard() {
       ) : tab === 'mydept' ? (
         <MyDeptLeaderboard data={myDeptData} loading={loading} me={me}/>
       ) : (
+        <>
         {loading ? (
         <div className="lb-state">Loading the board…</div>
       ) : data.length === 0 ? (
