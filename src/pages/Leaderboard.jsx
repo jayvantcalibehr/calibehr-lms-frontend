@@ -93,11 +93,11 @@ export default function Leaderboard() {
       {/* Tab switcher */}
       <div className="lb-tabs">
         <button className={`lb-tab ${tab === 'global' ? 'lb-tab--active' : ''}`} onClick={() => setTab('global')}>
-          <RiTrophyLine size={14}/> Global Ranking
+          <RiTrophyLine size={14}/> Overall
         </button>
-        <button className={`lb-tab ${tab === 'mydept' ? 'lb-tab--active' : ''}`} onClick={() => setTab('mydept')}>
+        {/* <button className={`lb-tab ${tab === 'mydept' ? 'lb-tab--active' : ''}`} onClick={() => setTab('mydept')}>
           <RiTeamLine size={14}/> My Department
-        </button>
+        </button> */}
         <button className={`lb-tab ${tab === 'dept' ? 'lb-tab--active' : ''}`} onClick={() => setTab('dept')}>
           <RiTeamLine size={14}/> All Departments
         </button>
