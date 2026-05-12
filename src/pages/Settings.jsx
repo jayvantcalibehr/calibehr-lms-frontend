@@ -20,6 +20,21 @@ function ProfileTab() {
   const [toast, setToast]         = useState(null);
   const [loading, setLoading]     = useState(false);
 
+  // Fetch fresh profile from /me to get ECR-resolved designation & department names
+  useEffect(() => {
+    API.get('/me').then(r => {
+      if (r?.data?.code === 1) {
+        const fresh = r.data.data;
+        const merged = { ...user, ...fresh,
+          emp_designation: fresh.designation || fresh.emp_designation || user.emp_designation,
+          emp_department:  fresh.department  || user.emp_department,
+        };
+        setUser(merged);
+        localStorage.setItem('user', JSON.stringify(merged));
+      }
+    }).catch(() => {});
+  }, []);
+
   const handlePhotoChange = (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -66,9 +81,11 @@ function ProfileTab() {
     { label: 'Full Name',     value: `${user.emp_first_name || ''} ${user.emp_last_name || ''}`.trim() || '—' },
     { label: 'Email',         value: user.emp_email || '—' },
     { label: 'Phone',         value: user.phone || '—' },
-    { label: 'Designation',   value: user.emp_designation || '—' },
-    { label: 'Department',    value: user.emp_department || '—' },
-    { label: 'Date Joined',   value: user.emp_doj || '—' },
+    { label: 'Designation',   value: user.emp_designation || user.designation || '—' },
+    { label: 'Department',    value: user.department || user.emp_department || '—' },
+    { label: 'Date Joined',   value: user.doj ? new Date(user.doj).toLocaleDateString('en-IN') : (user.emp_doj || '—') },
+    { label: 'Location',      value: user.location || '—' },
+    { label: 'On Roll',       value: user.onRoll === 1 ? 'Yes' : user.onRoll === 0 ? 'No' : '—' },
     { label: 'Auth Type',     value: user.auth_type === 'ldap' ? 'Active Directory' : 'Standard' },
   ];
 
@@ -658,7 +675,6 @@ export default function Settings() {
   const TABS = [
     { id: 'profile',  label: 'Profile',         icon: RiUser3Line,       comp: ProfileTab },
     { id: 'password', label: 'Password',        icon: RiKey2Line,        comp: PasswordTab },
-    { id: 'account',  label: 'Account',         icon: RiInformationLine, comp: AccountTab },
     ...(isAdmin() ? [{
       id: 'users', label: 'User Management', icon: RiShieldUserLine, comp: UserManagementTab,
     }] : []),
