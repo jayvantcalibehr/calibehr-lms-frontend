@@ -370,6 +370,20 @@ function UserManagementTab() {
     setSaving(false);
   };
 
+  const toggleStatus = async (u) => {
+    const isActive = u.emp_status === 'A';
+    try {
+      const res = await API.post('/Webservices/toggleUserStatus', { userID: u.id });
+      if (res.data.code === 1) {
+        setUsers(prev => prev.map(x => x.id === u.id
+          ? { ...x, emp_status: isActive ? 'I' : 'A', emp_active: isActive ? 'I' : 'A' }
+          : x
+        ));
+        setToast({ type: 'ok', text: `User ${isActive ? 'disabled' : 'enabled'} successfully` });
+      } else setToast({ type: 'err', text: res.data.message || 'Failed' });
+    } catch { setToast({ type: 'err', text: 'Network error' }); }
+  };
+
   const roleNameById = (id) => roles.find(r => r.id === Number(id))?.name || `Role ${id}`;
 
   const FILTERS = [
@@ -468,9 +482,19 @@ function UserManagementTab() {
                     }
                   </div>
                 </div>
-                <button className="btn btn--ghost btn--sm" onClick={() => openEdit(u)}>
-                  Edit
-                </button>
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                  <button className="btn btn--ghost btn--sm" onClick={() => openEdit(u)}>
+                    Edit roles
+                  </button>
+                  {u.id !== currentUser.id && (
+                    <button
+                      className={`btn btn--sm ${inactive ? 'btn--success' : 'btn--danger'}`}
+                      onClick={() => toggleStatus(u)}
+                    >
+                      {inactive ? 'Enable' : 'Disable'}
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -962,6 +986,22 @@ const CSS = `
 .btn--ghost:hover:not(:disabled) {
   background: var(--surface-2);
   border-color: var(--border-strong);
+}
+.btn--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 25%, transparent);
+}
+.btn--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+}
+.btn--success {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 25%, transparent);
+}
+.btn--success:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--success) 18%, transparent);
 }
 
 /* ── Stats ── */

@@ -5,7 +5,7 @@
  *
  * All API endpoints preserved from original.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
   RiAddLine, RiEdit2Line, RiSearchLine, RiCloseLine, RiCheckLine,
@@ -19,7 +19,61 @@ import API from '../../api/axios';
 import AppShell from '../../components/AppShell';
 import { can } from '../../utils/permissions';
 
-/* ── Constants ── */
+/* ── S3 Upload Field ── */
+function S3UploadField({ label, value, onChange, accept, endpoint, placeholder }) {
+  const [uploading, setUploading] = useState(false);
+  const [error,     setError]     = useState('');
+  const inputRef = useRef(null);
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await API.post(endpoint, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res.data.code === 1) {
+        onChange(res.data.data?.url || res.data.url || res.data.data);
+      } else {
+        setError(res.data.message || 'Upload failed');
+      }
+    } catch {
+      setError('Upload failed. Please try again.');
+    }
+    setUploading(false);
+    e.target.value = '';
+  };
+
+  return (
+    <div className="ac-field">
+      <label className="ac-label">{label}</label>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input className="ac-input" style={{ flex: 1 }} value={value}
+               onChange={e => onChange(e.target.value)}
+               placeholder={placeholder || 'Paste URL or upload file'}/>
+        <button type="button" className="ac-btn ac-btn--ghost"
+                style={{ flexShrink: 0, padding: '8px 12px', fontSize: 12 }}
+                onClick={() => inputRef.current?.click()}
+                disabled={uploading}>
+          {uploading ? '⏳ Uploading…' : '📁 Upload'}
+        </button>
+        <input ref={inputRef} type="file" accept={accept} style={{ display: 'none' }}
+               onChange={handleFile}/>
+      </div>
+      {error && <div className="ac-err"><RiAlertLine size={12}/>{error}</div>}
+      {value && accept?.includes('image') && (
+        <div className="ac-img-preview">
+          <img src={value} alt="preview" onError={e => { e.target.style.opacity = 0.2; }}/>
+          <span>Preview</span>
+        </div>
+      )}
+    </div>
+  );
+}
 const STATUS_LABELS = { 0: 'Disabled', 1: 'Draft', 2: 'Live' };
 const STATUS_PILL = { 0: 'ac-pill--off', 1: 'ac-pill--draft', 2: 'ac-pill--live' };
 const TOPIC_TYPE = { 1: 'Video', 2: 'PDF', 3: 'Resource', 4: 'Test' };
@@ -467,17 +521,14 @@ function CourseFormModal({ editing, categories, onClose, onSaved, onToast }) {
           </Field>
         </div>
         <div className="ac-grid-full">
-          <Field label="Cover image URL">
-            <input className="ac-input" value={form.image_url}
-                   onChange={e => set('image_url', e.target.value)}
-                   placeholder="https://your-bucket.s3.amazonaws.com/course.jpg"/>
-            {form.image_url && (
-              <div className="ac-img-preview">
-                <img src={form.image_url} alt="preview" onError={e => { e.target.style.opacity = 0.2; }}/>
-                <span>Preview</span>
-              </div>
-            )}
-          </Field>
+          <S3UploadField
+            label="Cover image"
+            value={form.image_url}
+            onChange={v => set('image_url', v)}
+            accept="image/*"
+            endpoint="/upload/course-image"
+            placeholder="https://your-bucket.s3.amazonaws.com/course.jpg"
+          />
         </div>
       </div>
       <div className="ac-modal-foot">
@@ -856,10 +907,14 @@ function TopicModal({ courseId, chapter, editing, onClose, onSaved, onToast }) {
         </Field>
         {type === 1 && (
           <>
-            <Field label="Video URL / S3 path">
-              <input className="ac-input" value={fileUrl} onChange={e => setFileUrl(e.target.value)}
-                     placeholder="https://your-bucket.s3.amazonaws.com/video.mp4"/>
-            </Field>
+            <S3UploadField
+              label="Video"
+              value={fileUrl}
+              onChange={setFileUrl}
+              accept="video/*"
+              endpoint="/upload/video"
+              placeholder="https://your-bucket.s3.amazonaws.com/video.mp4"
+            />
             <div className="ac-modal-row">
               <Field label="Video type">
                 <select className="ac-input" value={vidType} onChange={e => setVidType(Number(e.target.value))}>
@@ -876,10 +931,14 @@ function TopicModal({ courseId, chapter, editing, onClose, onSaved, onToast }) {
           </>
         )}
         {type === 2 && (
-          <Field label="PDF URL / S3 path">
-            <input className="ac-input" value={fileUrl} onChange={e => setFileUrl(e.target.value)}
-                   placeholder="https://your-bucket.s3.amazonaws.com/document.pdf"/>
-          </Field>
+          <S3UploadField
+            label="PDF"
+            value={fileUrl}
+            onChange={setFileUrl}
+            accept="application/pdf"
+            endpoint="/upload/pdf"
+            placeholder="https://your-bucket.s3.amazonaws.com/document.pdf"
+          />
         )}
         {type === 4 && (
           <div className="ac-modal-row">
