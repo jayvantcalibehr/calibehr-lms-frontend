@@ -404,6 +404,7 @@ const CSS = `
 .dh-title {
   font-family: var(--font-display); font-size: var(--text-4xl); font-weight: 700;
   letter-spacing: -0.04em; color: var(--text); margin: 0 0 8px; line-height: 1;
+  text-transform: capitalize;
 }
 .dh-sub { font-size: 13px; color: var(--text-2); margin: 0; line-height: 1.5; max-width: 520px; }
 .dh-myrank {
