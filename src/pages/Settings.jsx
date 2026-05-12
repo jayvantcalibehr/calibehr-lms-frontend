@@ -20,19 +20,21 @@ function ProfileTab() {
   const [toast, setToast]         = useState(null);
   const [loading, setLoading]     = useState(false);
 
-  // Fetch fresh profile from /me to get ECR-resolved designation & department names
+  // Fetch fresh profile from /me AND account-info to get ECR-resolved names
   useEffect(() => {
-    API.get('/me').then(r => {
-      if (r?.data?.code === 1) {
-        const fresh = r.data.data;
-        const merged = { ...user, ...fresh,
-          emp_designation: fresh.designation || fresh.emp_designation || user.emp_designation,
-          emp_department:  fresh.department  || user.emp_department,
-        };
-        setUser(merged);
-        localStorage.setItem('user', JSON.stringify(merged));
-      }
-    }).catch(() => {});
+    Promise.all([
+      API.get('/me').catch(() => null),
+      API.get('/auth/account-info').catch(() => null),
+    ]).then(([meRes, accRes]) => {
+      const me  = meRes?.data?.code  === 1 ? meRes.data.data  : {};
+      const acc = accRes?.data?.code === 1 ? accRes.data.data : {};
+      const merged = { ...user, ...me, ...acc,
+        emp_designation: acc.designation || me.designation || me.emp_designation || user.emp_designation,
+        emp_department:  acc.department  || me.department  || user.emp_department,
+      };
+      setUser(merged);
+      localStorage.setItem('user', JSON.stringify(merged));
+    });
   }, []);
 
   const handlePhotoChange = (e) => {
