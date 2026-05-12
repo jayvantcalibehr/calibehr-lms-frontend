@@ -448,7 +448,7 @@ function Styles() {
       .qt-page {
         min-height: 100vh;
         background: linear-gradient(180deg, #fafaf9 0%, #f4f4f3 100%);
-        font-family: 'Geist', 'Inter', -apple-system, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
         color: #0a0a0b;
         padding: 0;
       }
