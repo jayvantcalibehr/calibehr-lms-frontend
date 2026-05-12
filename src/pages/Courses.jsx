@@ -488,7 +488,7 @@ export default function Courses() {
   const [cats,      setCats]      = useState([]);
   const [selCat,    setSelCat]    = useState('all');
   const [search,    setSearch]    = useState('');
-  const [tab,       setTab]       = useState('my');
+  const [tab,       setTab]       = useState('catalog');
   const [loading,   setLoading]   = useState(true);
   const [selCourse, setSelCourse] = useState(null);
 
@@ -574,7 +574,7 @@ export default function Courses() {
 
       {/* Tabs */}
       <div className="cr-tabs">
-        {[['my', 'My courses'], ['catalog', 'Catalog']].map(([val, lbl]) => (
+        {[ ['catalog', 'Catalog'],['my', 'My courses']].map(([val, lbl]) => (
           <button key={val}
                   className={`cr-tab ${tab === val ? 'cr-tab--active' : ''}`}
                   onClick={() => setTab(val)}>

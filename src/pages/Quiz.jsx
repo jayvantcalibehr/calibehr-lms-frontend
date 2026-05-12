@@ -844,14 +844,14 @@ export default function Quiz() {
                   <button className="qz-action" onClick={() => setChartQuiz(q)} title="Analytics">
                     <RiPieChartLine size={12}/>
                   </button>
-                  <button className="qz-action" onClick={() => toggleVisibility(q)}
+                  {/* <button className="qz-action" onClick={() => toggleVisibility(q)}
                           title={q.visibility == 1 ? 'Hide' : 'Show'}>
                     {q.visibility == 1 ? <RiEyeOffLine size={12}/> : <RiEyeLine size={12}/>}
-                  </button>
-                  <button className="qz-action qz-action--danger"
+                  </button> */}
+                  {/* <button className="qz-action qz-action--danger"
                           onClick={() => setConfirmDel(q)} title="Delete">
                     <RiDeleteBin6Line size={12}/>
-                  </button>
+                  </button> */}
                 </div>
               </article>
             );

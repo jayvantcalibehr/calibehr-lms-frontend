@@ -1094,10 +1094,10 @@ export default function Interview() {
                     <button className="iv-icon-btn" onClick={() => setChartInv(iv)} title="Analytics">
                       <RiPieChartLine size={12}/>
                     </button>
-                    <button className="iv-icon-btn iv-icon-btn--danger"
+                    {/* <button className="iv-icon-btn iv-icon-btn--danger"
                             onClick={() => setConfirmDel(iv)} title="Delete">
                       <RiDeleteBin6Line size={12}/>
-                    </button>
+                    </button> */}
                   </div>
                 ) : (
                   <button className="iv-card-cta" onClick={() => setSelInv(iv)} disabled={done || exp}>
