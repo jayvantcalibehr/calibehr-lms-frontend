@@ -25,29 +25,27 @@ const MAIN_NAV = [
   { key: 'courses',     icon: 'FiBook',       label: 'Courses',     path: '/courses',
     roles: [1,2,3,4,5,6] },
 
-  // Quiz — Admin (1) + Quiz Master (4) + HR Recruiter (6) only (matches old)
-  { key: 'quiz',        icon: 'FiAward',      label: 'Quiz',        path: '/quiz',
-    roles: [1,4,6] },
-
-  // Interview — Admin (1) + Interviewer (5) + HR Recruiter (6) only (matches old)
-  { key: 'interview',   icon: 'FiVideo',      label: 'Interviews',  path: '/interview',
-    roles: [1,5,6] },
-
   { key: 'leaderboard', icon: 'FiStar',       label: 'Leaderboard', path: '/leaderboard',
     roles: [1,2,3,4,5,6] },
-
-  // Reports — Admin only (matches old)
-  { key: 'reports',     icon: 'FiTrendingUp', label: 'Reports',     path: '/reports',
-    roles: [1] },
 
   { key: 'settings',    icon: 'FiUsers',      label: 'Settings',    path: '/settings',
     roles: [1,2,3,4,5,6] },
 ];
 
-/* Admin section — Categories + Manage Courses for Admin + Trainer */
+/* Admin section — visible only to specific roles */
 const ADMIN_NAV = [
+  { key: 'quiz',        icon: 'FiAward',      label: 'Quiz',        path: '/quiz',
+    roles: [1,4,6] },
+
+  { key: 'interview',   icon: 'FiVideo',      label: 'Interviews',  path: '/interview',
+    roles: [1,5,6] },
+
+  { key: 'reports',     icon: 'FiTrendingUp', label: 'Reports',     path: '/reports',
+    roles: [1] },
+
   { key: 'admin-categories', icon: 'FiFolder', label: 'Categories',
     path: '/admin/categories', roles: [1,2] },
+
   { key: 'admin-courses',    icon: 'FiLayers', label: 'Manage Courses',
     path: '/admin/courses',    roles: [1,2] },
 ];

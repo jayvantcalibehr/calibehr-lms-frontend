@@ -226,6 +226,18 @@ button { cursor: pointer; }
 }
 [data-theme="dark"] ::selection { color: var(--accent-hover); }
 
+[data-theme="dark"] .sb {
+  background: var(--bg) !important;
+}
+
+/* Fix native select dropdown in dark mode */
+[data-theme="dark"] select,
+[data-theme="dark"] select option {
+  background: #1e1e2e;
+  color: #e2e2e8;
+  color-scheme: dark;
+}
+
 /* Scrollbars — minimal, modern */
 ::-webkit-scrollbar           { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track     { background: transparent; }

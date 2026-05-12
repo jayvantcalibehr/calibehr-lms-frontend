@@ -574,7 +574,7 @@ export default function Courses() {
 
       {/* Tabs */}
       <div className="cr-tabs">
-        {[['catalog', 'Catalog'],['my', 'My courses']].map(([val, lbl]) => (
+        {[['my', 'My courses'], ['catalog', 'Catalog']].map(([val, lbl]) => (
           <button key={val}
                   className={`cr-tab ${tab === val ? 'cr-tab--active' : ''}`}
                   onClick={() => setTab(val)}>
@@ -603,7 +603,8 @@ export default function Courses() {
         </div>
         <div className="cr-filter">
           <RiFilter3Line size={13}/>
-          <select value={selCat} onChange={e => setSelCat(e.target.value)}>
+          <select value={selCat} onChange={e => setSelCat(e.target.value)}
+                  style={{ colorScheme: 'dark light' }}>
             <option value="all">All categories</option>
             {cats.map(c => (
               <option key={c.id} value={c.id}>{c.category_name || c.name}</option>
@@ -681,7 +682,8 @@ const CSS = `
 .cr-search-clear { background: none; border: none; padding: 2px; display: grid; place-items: center; color: var(--text-3); border-radius: 4px; cursor: pointer; }
 .cr-search-clear:hover { background: var(--surface-2); color: var(--text); }
 .cr-filter { display: flex; align-items: center; gap: 6px; padding: 9px 12px; background: var(--surface); border-radius: var(--r-md); box-shadow: var(--shadow-sm), var(--ring); color: var(--text-3); min-width: 180px; }
-.cr-filter select { flex: 1; background: transparent; border: none; outline: none; font-family: inherit; font-size: var(--text-base); color: var(--text); cursor: pointer; }
+.cr-filter select { flex: 1; background: var(--surface); border: none; outline: none; font-family: inherit; font-size: var(--text-base); color: var(--text); cursor: pointer; color-scheme: light dark; }
+.cr-filter select option { background: var(--surface); color: var(--text); }
 
 .cr-count { font-size: var(--text-xs); color: var(--text-3); font-weight: 500; margin-bottom: var(--s-3); letter-spacing: -0.005em; }
 
