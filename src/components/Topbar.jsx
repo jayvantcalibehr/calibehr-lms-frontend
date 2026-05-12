@@ -44,11 +44,11 @@ export default function Topbar({ onMenuClick }) {
         </div>
 
         <div className="tb-right">
-          <button className="tb-search-btn" aria-label="Search (coming soon)" disabled>
+          {/* <button className="tb-search-btn" aria-label="Search (coming soon)" disabled>
             <RiSearchLine size={14}/>
             <span className="tb-search-text">Search</span>
             <kbd className="tb-kbd">{isMac ? '⌘' : 'Ctrl'}<span>K</span></kbd>
-          </button>
+          </button> */}
 
           <button
             className="tb-icon-btn"
