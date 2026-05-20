@@ -20,7 +20,7 @@ import AppShell from '../../components/AppShell';
 import { can } from '../../utils/permissions';
 
 /* ── S3 Upload Field ── */
-function S3UploadField({ label, value, onChange, accept, endpoint, placeholder }) {
+function S3UploadField({ label, value, onChange, accept, endpoint, placeholder, extraData = {} }) {
   const [uploading, setUploading] = useState(false);
   const [error,     setError]     = useState('');
   const inputRef = useRef(null);
@@ -33,6 +33,8 @@ function S3UploadField({ label, value, onChange, accept, endpoint, placeholder }
     try {
       const form = new FormData();
       form.append('file', file);
+      // Append any extra fields (e.g. courseID, chapterID)
+      Object.entries(extraData).forEach(([k, v]) => { if (v != null) form.append(k, v); });
       const res = await API.post(endpoint, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -528,6 +530,7 @@ function CourseFormModal({ editing, categories, onClose, onSaved, onToast }) {
             accept="image/*"
             endpoint="/upload/course-image"
             placeholder="https://your-bucket.s3.amazonaws.com/course.jpg"
+            extraData={{ courseID: editing?.id }}
           />
         </div>
       </div>

@@ -15,13 +15,15 @@ import AppShell from '../components/AppShell';
    VIDEO PLAYER — supports YouTube + native MP4
    Auto-completes after 90% watch time
    ═══════════════════════════════════════════════════════════════════ */
-function VideoPlayer({ url, onComplete }) {
+function VideoPlayer({ url, onComplete, videoType }) {
   const videoRef = useRef(null);
   const [watched, setWatched] = useState(false);
 
-  const isYoutube = url && (url.includes('youtube.com') || url.includes('youtu.be'));
+  console.log('[VideoPlayer] url:', url, 'videoType:', videoType);
+  const isYoutube = videoType === 2 || (url && (url.includes('youtube.com') || url.includes('youtu.be')));
+  console.log('[VideoPlayer] isYoutube:', isYoutube);
   const getYoutubeId = (u) => {
-    const match = u.match(/(?:youtu\.be\/|v=)([^&?\s]+)/);
+    const match = u.match(/(?:youtu\.be\/|[?&]v=)([a-zA-Z0-9_-]{11})/);
     return match ? match[1] : '';
   };
 
@@ -641,6 +643,7 @@ export default function CourseDetail() {
             <div className="cdp-panel-body">
               {activeTopic.type === 1 && (
                 <VideoPlayer url={activeTopic.file_url}
+                             videoType={activeTopic.video_type}
                              onComplete={() => markComplete(activeTopic.id)}/>
               )}
               {activeTopic.type === 2 && (
