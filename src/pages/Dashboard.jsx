@@ -70,8 +70,6 @@ export default function Dashboard() {
   const hour          = new Date().getHours();
   const greeting      = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-  const COURSE_COLORS = ['#6366F1','#10B981','#F59E0B','#EC4899','#06B6D4'];
-
   const ADMIN_CARDS = adminStats ? [
     { Icon: RiBookOpenLine, label: 'Published Courses', value: adminStats.totalCourses,                        c1: '#6366F1', c2: '#8B5CF6', path: '/admin/courses', trend: '+8 this month', trendType: 'up' },
     { Icon: RiQuestionLine, label: 'Total Quizzes',     value: adminStats.totalQuizzes,                        c1: '#F59E0B', c2: '#EF4444', path: '/quiz',         trend: 'Active',        trendType: 'info' },
@@ -101,7 +99,6 @@ export default function Dashboard() {
     { rank: 5, label: '5th', icon: RiMedalFill,  c1: '#10B981', c2: '#059669' },
   ];
 
-  /* Skeleton shimmer */
   const Sk = ({ w='100%', h='13px', r='6px' }) => (
     <span className="dh-sk" style={{ width: w, height: h, borderRadius: r, display: 'block' }}/>
   );
@@ -207,20 +204,19 @@ export default function Dashboard() {
               {courses.map((c, i) => {
                 const pct    = c.completed ? 100 : Math.round(c.progress_percentage ?? 0);
                 const isDone = c.completed;
-                const col    = COURSE_COLORS[i % COURSE_COLORS.length];
                 return (
                   <li key={i} className="dh-course" style={{ animationDelay: `${i * 55}ms` }}>
-                    <div className="dh-course-thumb" style={{ background: col + '1a', color: col }}>
+                    <div className="dh-course-thumb">
                       <RiBookOpenLine size={14}/>
                     </div>
                     <div className="dh-course-body">
                       <div className="dh-course-name">{c.course_name || c.name || 'Course'}</div>
                       <div className="dh-course-row">
                         <div className="dh-progress">
-                          <div className="dh-progress-fill" style={{
-                            width: pct + '%',
-                            background: isDone ? 'linear-gradient(90deg,#10B981,#059669)' : `linear-gradient(90deg,${col},${COURSE_COLORS[(i+1)%COURSE_COLORS.length]})`,
-                          }}/>
+                          <div
+                            className={`dh-progress-fill ${isDone ? 'dh-progress-fill--done' : 'dh-progress-fill--prog'}`}
+                            style={{ width: pct + '%' }}
+                          />
                         </div>
                         <span className="dh-course-pct">{pct}%</span>
                         <span className={`dh-pill ${isDone ? 'dh-pill--done' : 'dh-pill--prog'}`}>
@@ -530,10 +526,15 @@ const CSS = `
   transition: all var(--duration-fast) var(--ease); cursor: pointer;
 }
 .dh-course:hover { background: var(--surface-3); border-color: var(--border); }
+
+/* Course thumb — single emerald color, no more random colors */
 .dh-course-thumb {
   width: 30px; height: 30px; border-radius: 8px;
   display: grid; place-items: center; flex-shrink: 0;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
 }
+
 .dh-course-body { flex: 1; min-width: 0; }
 .dh-course-name {
   font-size: 12px; font-weight: 600; color: var(--text);
@@ -543,10 +544,15 @@ const CSS = `
 .dh-course-row { display: flex; align-items: center; gap: 8px; }
 .dh-progress { flex: 1; height: 3px; background: var(--surface-3); border-radius: 99px; overflow: hidden; }
 .dh-progress-fill { height: 100%; border-radius: 99px; transition: width 700ms var(--ease-out); }
+
+/* Progress bar — consistent colors: blue for in-progress, green for done */
+.dh-progress-fill--prog { background: linear-gradient(90deg, #3b82f6, #6366f1); }
+.dh-progress-fill--done { background: linear-gradient(90deg, #10B981, #059669); }
+
 .dh-course-pct { font-size: 10.5px; font-weight: 700; color: var(--text-2); min-width: 28px; text-align: right; }
 .dh-pill { font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 99px; flex-shrink: 0; }
 .dh-pill--done { background: var(--success-soft); color: var(--success); }
-.dh-pill--prog { background: var(--warning-soft); color: var(--warning); }
+.dh-pill--prog { background: var(--info-soft); color: var(--info); }
 
 /* ── Podium ── */
 .dh-podium { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 7px; }
