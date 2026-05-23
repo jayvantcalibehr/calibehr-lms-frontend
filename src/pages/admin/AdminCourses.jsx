@@ -558,6 +558,7 @@ function CourseBuilder({ course, onBack }) {
   const [confirmDlg, setConfirmDlg] = useState(null);
   const [qsModal,    setQsModal]    = useState(null); // topic for Questions modal
   const [rlModal,    setRlModal]    = useState(null); // topic for Resource Links modal
+  const [lockedModal, setLockedModal] = useState(null); // topic for Locked Users modal
   const { toast, show } = useToast();
 
   const loadChapters = useCallback(async () => {
@@ -717,6 +718,12 @@ function CourseBuilder({ course, onBack }) {
                                 <HiOutlineAcademicCap size={11}/>Questions
                               </button>
                             )}
+                            {t.type === 4 && (t.number_of_attempt > 0 || t.numberOfAttempt > 0) && (
+                              <button className="ac-action ac-action--warn"
+                                      onClick={() => setLockedModal(t)}>
+                                <RiLockLine size={11}/>Locked Users
+                              </button>
+                            )}
                             {t.type === 3 && (
                               <button className="ac-action ac-action--add"
                                       onClick={() => { setRlModal(t); }}>
@@ -754,6 +761,12 @@ function CourseBuilder({ course, onBack }) {
         <TestQuestionsModal
           topic={qsModal} courseId={course.id}
           onClose={() => setQsModal(null)}
+          onToast={show}/>
+      )}
+      {lockedModal && (
+        <LockedUsersModal
+          topic={lockedModal}
+          onClose={() => setLockedModal(null)}
           onToast={show}/>
       )}
       {rlModal && (
@@ -973,6 +986,207 @@ function TopicModal({ courseId, chapter, editing, onClose, onSaved, onToast }) {
 }
 
 /* ═══ TEST QUESTIONS MODAL ═══ */
+// =============================================================================
+// LOCKED USERS MODAL
+// =============================================================================
+function LockedUsersModal({ topic, onClose, onToast }) {
+  const [users,    setUsers]    = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [search,   setSearch]   = useState('');
+  const [selected, setSelected] = useState(new Set());
+  const [unlocking, setUnlocking] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/Webservice/getLockedUsersWS', { params: { topicID: topic.id } });
+      if (res.data.code === 1) setUsers(res.data.data || []);
+    } catch { onToast?.('Could not load locked users', 'err'); }
+    setLoading(false);
+  }, [topic.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const filtered = users.filter(u =>
+    !search || u.learnerName?.toLowerCase().includes(search.toLowerCase()) ||
+    u.learnerEmpCode?.toLowerCase().includes(search.toLowerCase()) ||
+    u.learnerEmail?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const toggleSelect = (userID) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(userID) ? next.delete(userID) : next.add(userID);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    const lockable = filtered.filter(u => u.isUnlocked === 0).map(u => u.userID);
+    const allSelected = lockable.every(id => selected.has(id));
+    setSelected(prev => {
+      const next = new Set(prev);
+      lockable.forEach(id => allSelected ? next.delete(id) : next.add(id));
+      return next;
+    });
+  };
+
+  const unlockSingle = async (userID) => {
+    try {
+      const res = await API.post('/Webservice/unlockAttemptWS', { topicID: topic.id, userID });
+      if (res.data.code === 1) { onToast?.(res.data.message); load(); }
+      else onToast?.(res.data.message, 'err');
+    } catch { onToast?.('Unlock failed', 'err'); }
+  };
+
+  const unlockBulk = async () => {
+    if (selected.size === 0) return;
+    if (!window.confirm(`Unlock attempt for ${selected.size} selected learner(s)?`)) return;
+    setUnlocking(true);
+    try {
+      const res = await API.post('/Webservice/bulkUnlockAttemptWS', {
+        topicID: topic.id,
+        userIDs: Array.from(selected),
+      });
+      if (res.data.code === 1) {
+        onToast?.(res.data.message);
+        setSelected(new Set());
+        load();
+      } else onToast?.(res.data.message, 'err');
+    } catch { onToast?.('Bulk unlock failed', 'err'); }
+    setUnlocking(false);
+  };
+
+  const lockableFiltered = filtered.filter(u => u.isUnlocked === 0);
+  const allPageSelected  = lockableFiltered.length > 0 && lockableFiltered.every(u => selected.has(u.userID));
+
+  return (
+    <Modal large onClose={onClose}>
+      <div className="ac-modal-head">
+        <h2 className="ac-modal-title">
+          <RiLockLine size={15} style={{ marginRight: 6, verticalAlign: -2 }}/>
+          Locked Learners · {topic.name}
+        </h2>
+        <button className="ac-modal-close" onClick={onClose}><RiCloseLine size={16}/></button>
+      </div>
+      <div className="ac-modal-body">
+        {/* Search */}
+        <div style={{ display:'flex', gap:8, marginBottom:12, alignItems:'center' }}>
+          <div style={{ flex:1, position:'relative' }}>
+            <RiSearchLine size={13} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--text-3)' }}/>
+            <input className="ac-input" style={{ paddingLeft:30 }}
+              placeholder="Search by name, emp code or email..."
+              value={search} onChange={e => setSearch(e.target.value)}/>
+          </div>
+          {search && (
+            <button className="ac-btn ac-btn--ghost" onClick={() => setSearch('')}>
+              <RiCloseLine size={12}/>Clear
+            </button>
+          )}
+        </div>
+
+        {/* Bulk toolbar */}
+        {selected.size > 0 && (
+          <div style={{ background:'#fff8e1', border:'1px solid #ffe082', borderRadius:8, padding:'10px 14px', marginBottom:12, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+            <span style={{ fontSize:13, fontWeight:600, color:'#856404' }}>
+              <RiCheckLine size={13} style={{ marginRight:4 }}/>{selected.size} selected
+            </span>
+            <button className="ac-btn ac-btn--primary" style={{ fontSize:12 }}
+              onClick={unlockBulk} disabled={unlocking}>
+              {unlocking ? 'Unlocking…' : <><RiLockLine size={11}/> Unlock Selected</>}
+            </button>
+            <button className="ac-btn ac-btn--ghost" style={{ fontSize:12 }}
+              onClick={() => setSelected(new Set())}>
+              <RiCloseLine size={11}/>Clear
+            </button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="ac-state">Loading locked learners…</div>
+        ) : filtered.length === 0 ? (
+          <div className="ac-qs-empty">
+            {search ? 'No results found.' : 'No locked learners for this test.'}
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize:12, color:'var(--text-3)', marginBottom:8 }}>
+              Showing {filtered.length} locked learner{filtered.length !== 1 ? 's' : ''}
+            </div>
+            <table className="ac-table" style={{ tableLayout:'fixed', width:'100%' }}>
+              <colgroup>
+                <col style={{ width:36 }}/>
+                <col style={{ width:36 }}/>
+                <col style={{ width:'30%' }}/>
+                <col style={{ width:90 }}/>
+                <col style={{ width:90 }}/>
+                <col style={{ width:70 }}/>
+                <col style={{ width:100 }}/>
+                <col style={{ width:90 }}/>
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" checked={allPageSelected}
+                      onChange={toggleAll} title="Select all lockable"/>
+                  </th>
+                  <th>#</th>
+                  <th>Learner</th>
+                  <th>Emp Code</th>
+                  <th>Attempts</th>
+                  <th>Score</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((u, i) => (
+                  <tr key={u.userID} style={{ background: selected.has(u.userID) ? 'color-mix(in srgb,var(--warning,#f59e0b) 10%,transparent)' : '' }}>
+                    <td>
+                      {u.isUnlocked === 0
+                        ? <input type="checkbox" checked={selected.has(u.userID)} onChange={() => toggleSelect(u.userID)}/>
+                        : <input type="checkbox" disabled/>
+                      }
+                    </td>
+                    <td style={{ fontSize:12, color:'var(--text-3)' }}>{i + 1}</td>
+                    <td style={{ overflow:'hidden' }}>
+                      <div style={{ fontWeight:500, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={u.learnerName}>{u.learnerName}</div>
+                      <div style={{ fontSize:11, color:'var(--text-3)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={u.learnerEmail}>{u.learnerEmail}</div>
+                    </td>
+                    <td style={{ fontSize:12 }}>{u.learnerEmpCode}</td>
+                    <td>
+                      <span style={{ background:'#e0e7ff', color:'#3730a3', borderRadius:12, padding:'2px 7px', fontSize:11, fontWeight:600, whiteSpace:'nowrap' }}>
+                        {u.attemptCount}×
+                      </span>
+                    </td>
+                    <td style={{ fontWeight:600, fontSize:13, color: u.bestScore >= 50 ? 'var(--success)' : 'var(--danger)' }}>
+                      {u.bestScore}%
+                    </td>
+                    <td>
+                      {u.isUnlocked === 1
+                        ? <span style={{ fontSize:12, fontWeight:600, color:'#22c55e' }}>Unlocked</span>
+                        : <span style={{ fontSize:12, fontWeight:600, color:'#ef4444' }}>Locked</span>
+                      }
+                    </td>
+                    <td>
+                      {u.isUnlocked === 0
+                        ? <button className="ac-action ac-action--warn" onClick={() => unlockSingle(u.userID)}>
+                            <RiLockLine size={11}/>Unlock
+                          </button>
+                        : <span style={{ fontSize:11, color:'var(--text-3)' }}>⏳ Waiting</span>
+                      }
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function TestQuestionsModal({ topic, courseId, onClose, onToast }) {
   const [questions, setQuestions] = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -1387,6 +1601,8 @@ const CSS = `
 .ac-action--success:hover{background:color-mix(in srgb,var(--success) 18%,transparent)}
 .ac-action--danger{background:var(--danger-soft);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 25%,transparent)}
 .ac-action--danger:hover{background:color-mix(in srgb,var(--danger) 18%,transparent)}
+.ac-action--warn{background:transparent;color:#f59e0b;border-color:#f59e0b}
+.ac-action--warn:hover{background:color-mix(in srgb,#f59e0b 12%,transparent)}
 .ac-action--add{background:var(--accent-soft);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 25%,transparent)}
 .ac-action--add:hover{background:color-mix(in srgb,var(--accent) 18%,transparent)}
 .ac-state{text-align:center;padding:var(--s-9) var(--s-4);color:var(--text-3);font-size:var(--text-sm)}
