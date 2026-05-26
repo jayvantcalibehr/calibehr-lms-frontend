@@ -103,12 +103,14 @@ function TopicTest({ topic, courseId, chapterId, onComplete }) {
   const [submitted, setSubmitted] = useState(false);
   const [result,    setResult]    = useState(null);
   const [loading,   setLoading]   = useState(true);
+  const [locked,    setLocked]    = useState(false);
+  const [lockMsg,   setLockMsg]   = useState('');
 
   useEffect(() => { loadQuestions(); }, [topic.id]);
 
   const loadQuestions = async () => {
     setLoading(true);
-    setAnswers({}); setSubmitted(false); setResult(null);
+    setAnswers({}); setSubmitted(false); setResult(null); setLocked(false); setLockMsg('');
     try {
       const res = await API.get('/Webservice/getCourseTopicQuestions', { params: { topicID: topic.id } });
       if (res.data.code === 1) setQuestions(res.data.data || []);
@@ -128,14 +130,33 @@ function TopicTest({ topic, courseId, chapterId, onComplete }) {
         setResult(res.data.data);
         setSubmitted(true);
         if (res.data.data?.passed) onComplete?.();
+      } else if (res.data.code === 0) {
+        // Attempt limit reached — locked
+        setLocked(true);
+        setLockMsg(res.data.message || 'Attempt limit reached. Please contact admin to unlock.');
       }
     } catch {}
   };
 
   if (loading) return <div className="ta-state">Loading questions…</div>;
 
+  // Locked state — show message, no retry
+  if (locked) {
+    return (
+      <div className="ta-wrap">
+        <div className="ta-result-icon ta-result-icon--fail">
+          <RiCloseLine size={28}/>
+        </div>
+        <h3 className="ta-title">Attempt Limit Reached</h3>
+        <p className="ta-msg">{lockMsg}</p>
+      </div>
+    );
+  }
+
   if (submitted && result) {
     const passed = !!result.passed;
+    // Check if locked after this submission (failed attempts >= limit)
+    const isNowLocked = !passed && topic.number_of_attempt > 0;
     return (
       <div className="ta-wrap">
         <div className={`ta-result-icon ${passed ? 'ta-result-icon--ok' : 'ta-result-icon--fail'}`}>
@@ -148,7 +169,7 @@ function TopicTest({ topic, courseId, chapterId, onComplete }) {
             ? 'Great job! You passed.'
             : `You need ${topic.passing_percentage ?? 75}% to pass. Try again!`}
         </p>
-        {!passed && (
+        {!passed && !isNowLocked && (
           <button className="cdp-btn cdp-btn--primary" onClick={loadQuestions}>
             Retry
           </button>
