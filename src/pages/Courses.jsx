@@ -101,8 +101,14 @@ function TopicAssessment({ topic, courseId, chapterId, onPassed }) {
   const [result,   setResult]   = useState(null);
   const [error,    setError]    = useState('');
 
+  const [pastAttempts, setPastAttempts] = useState([]);
+
   useEffect(() => {
     setPhase('intro'); setQuestions([]); setAnswers({}); setResult(null); setError('');
+    // Load past attempts for this topic
+    API.get('/Webservice/getTopicAttempts', { params: { topicID: topic.id, courseID: courseId } })
+      .then(res => { if (res.data.code === 1) setPastAttempts(res.data.data || []); })
+      .catch(() => {});
   }, [topic.id]);
 
   const startAssessment = async () => {
@@ -202,6 +208,31 @@ function TopicAssessment({ topic, courseId, chapterId, onPassed }) {
         <button className="cr-btn cr-btn--primary" onClick={retry} style={{ marginTop: 16 }}>
           Try again
         </button>
+      )}
+
+      {pastAttempts.length > 0 && (
+        <div className="ta-past">
+          <div className="ta-past-title">Past Attempts</div>
+          {pastAttempts.map((a, i) => {
+            const ok = a.passed || a.percentage >= (topic.passing_percentage || 70);
+            return (
+              <div key={i} className={`ta-attempt ${ok ? 'ta-attempt--pass' : 'ta-attempt--fail'}`}>
+                <div className="ta-attempt-left">
+                  <div className="ta-attempt-score">{a.percentage}% Score</div>
+                  <div className="ta-attempt-meta">
+                    You attempt <strong>{a.totalQuestions}</strong> questions and from that <strong>{a.correctAnswers}</strong> answer is correct
+                  </div>
+                  <div className="ta-attempt-date">
+                    {a.answeredOn ? new Date(a.answeredOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                  </div>
+                </div>
+                <div className={`ta-attempt-icon ${ok ? 'ta-attempt-icon--pass' : 'ta-attempt-icon--fail'}`}>
+                  {ok ? '✓' : '✗'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
@@ -827,6 +858,20 @@ const CSS = `
 .ta-opt:hover { background: var(--surface-3); }
 .ta-opt--sel { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; }
 .ta-opt input[type=radio] { accent-color: var(--accent); flex-shrink: 0; }
+
+/* ── Past Attempts ── */
+.ta-past { margin-top: var(--s-5); text-align: left; border-top: 1px solid var(--border); padding-top: var(--s-4); }
+.ta-past-title { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 400; letter-spacing: -0.025em; color: var(--text); margin-bottom: var(--s-3); text-align: center; }
+.ta-attempt { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) var(--s-4); border-radius: var(--r-md); border: 1px solid var(--border); margin-bottom: var(--s-2); background: var(--surface); }
+.ta-attempt--pass { border-color: var(--success-soft); }
+.ta-attempt--fail { border-color: #fecaca; }
+.ta-attempt-left { flex: 1; }
+.ta-attempt-score { font-size: var(--text-md); font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.ta-attempt-meta { font-size: var(--text-sm); color: var(--text-2); margin-bottom: 3px; }
+.ta-attempt-date { font-size: var(--text-xs); color: var(--text-3); font-style: italic; }
+.ta-attempt-icon { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+.ta-attempt-icon--pass { background: var(--success-soft); color: var(--success); }
+.ta-attempt-icon--fail { background: #fee2e2; color: #dc2626; }
 
 /* ═══ Inputs ═══ */
 .cr-input { width: 100%; padding: 9px 12px; background: var(--surface-2); border: 1px solid transparent; border-radius: var(--r-md); font-family: inherit; font-size: var(--text-base); color: var(--text); outline: none; transition: all var(--duration-fast) var(--ease); resize: vertical; }
