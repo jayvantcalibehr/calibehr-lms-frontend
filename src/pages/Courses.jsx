@@ -100,14 +100,29 @@ function TopicAssessment({ topic, courseId, chapterId, onPassed }) {
   const [answers,  setAnswers]  = useState({});
   const [result,   setResult]   = useState(null);
   const [error,    setError]    = useState('');
+  const [locked,   setLocked]   = useState(false);
+  const [lockMsg,  setLockMsg]  = useState('');
 
   const [pastAttempts, setPastAttempts] = useState([]);
 
   useEffect(() => {
     setPhase('intro'); setQuestions([]); setAnswers({}); setResult(null); setError('');
-    // Load past attempts for this topic
+    setLocked(false); setLockMsg('');
+
+    // Load past attempts + check locked status from backend
     API.get('/Webservice/getTopicAttempts', { params: { topicID: topic.id, courseID: courseId } })
-      .then(res => { if (res.data.code === 1) setPastAttempts(res.data.data || []); })
+      .then(res => {
+        if (res.data.code === 1) {
+          const data = res.data.data;
+          // New response shape: { attempts, isLocked, isUnlocked, attemptLimit, failedCount }
+          const attempts = data?.attempts || data || [];
+          setPastAttempts(attempts);
+          if (data?.isLocked) {
+            setLocked(true);
+            setLockMsg('Attempt limit reached. Please contact admin to unlock.');
+          }
+        }
+      })
       .catch(() => {});
   }, [topic.id]);
 
@@ -137,6 +152,22 @@ function TopicAssessment({ topic, courseId, chapterId, onPassed }) {
       if (res.data.code === 1) {
         setResult(res.data.data); setPhase('result');
         if (res.data.data?.passed) onPassed && onPassed();
+        // Reload attempts to check if now locked after this submission
+        API.get('/Webservice/getTopicAttempts', { params: { topicID: topic.id, courseID: courseId } })
+          .then(r => {
+            if (r.data.code === 1) {
+              const data = r.data.data;
+              setPastAttempts(data?.attempts || data || []);
+              if (data?.isLocked) {
+                setLocked(true);
+                setLockMsg('Attempt limit reached. Please contact admin to unlock.');
+              }
+            }
+          }).catch(() => {});
+      } else if (res.data.code === 0 && res.data.message?.toLowerCase().includes('attempt limit')) {
+        setLocked(true);
+        setLockMsg(res.data.message);
+        setPhase('intro');
       } else {
         setError(res.data.message || 'Submission failed.'); setPhase('quiz');
       }
@@ -146,6 +177,34 @@ function TopicAssessment({ topic, courseId, chapterId, onPassed }) {
   };
 
   const retry = () => { setPhase('intro'); setAnswers({}); setResult(null); setError(''); };
+
+  if (locked) {
+    return (
+      <div className="ta-wrap">
+        <div className="ta-result-icon ta-result-icon--fail"><RiCloseLine size={28}/></div>
+        <h3 className="ta-title">Attempt Limit Reached</h3>
+        <p className="ta-sub">{lockMsg}</p>
+        {pastAttempts.length > 0 && (
+          <div className="ta-past">
+            <div className="ta-past-title">Past Attempts</div>
+            {pastAttempts.map((a, i) => {
+              const ok = a.passed;
+              return (
+                <div key={i} className={`ta-attempt ${ok ? 'ta-attempt--pass' : 'ta-attempt--fail'}`}>
+                  <div className="ta-attempt-left">
+                    <div className="ta-attempt-score">{a.percentage}% Score</div>
+                    <div className="ta-attempt-meta">You attempt <strong>{a.totalQuestions}</strong> questions and from that <strong>{a.correctAnswers}</strong> answer is correct</div>
+                    <div className="ta-attempt-date">{a.answeredOn ? new Date(a.answeredOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</div>
+                  </div>
+                  <div className={`ta-attempt-icon ${ok ? 'ta-attempt-icon--pass' : 'ta-attempt-icon--fail'}`}>{ok ? '✓' : '✗'}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (phase === 'intro' || phase === 'loading') {
     return (

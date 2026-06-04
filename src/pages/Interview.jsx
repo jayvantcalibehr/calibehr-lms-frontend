@@ -1,48 +1,80 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from "react";
 import {
-  RiVideoLine, RiVideoFill, RiPlayFill, RiStopCircleLine,
-  RiCameraLine, RiUploadLine, RiTimeLine, RiCheckLine, RiCloseLine,
-  RiAddLine, RiEdit2Line, RiDeleteBin6Line, RiSendPlaneLine,
-  RiMailLine, RiListUnordered, RiPieChartLine, RiRefreshLine,
-  RiSearchLine, RiArrowLeftLine, RiAlertLine, RiRecordCircleLine,
-  RiUserVoiceLine, RiQuestionLine, RiArrowDownSLine, RiArrowRightSLine,
-  RiDownloadLine, RiVolumeUpLine,
-} from 'react-icons/ri';
-import API from '../api/axios';
-import AppShell from '../components/AppShell';
-import { can } from '../utils/permissions';
+  RiVideoLine,
+  RiVideoFill,
+  RiPlayFill,
+  RiStopCircleLine,
+  RiCameraLine,
+  RiUploadLine,
+  RiTimeLine,
+  RiCheckLine,
+  RiCloseLine,
+  RiAddLine,
+  RiEdit2Line,
+  RiDeleteBin6Line,
+  RiSendPlaneLine,
+  RiMailLine,
+  RiListUnordered,
+  RiPieChartLine,
+  RiRefreshLine,
+  RiSearchLine,
+  RiArrowLeftLine,
+  RiAlertLine,
+  RiRecordCircleLine,
+  RiUserVoiceLine,
+  RiQuestionLine,
+  RiArrowDownSLine,
+  RiArrowRightSLine,
+  RiDownloadLine,
+  RiVolumeUpLine,
+} from "react-icons/ri";
+import API from "../api/axios";
+import AppShell from "../components/AppShell";
+import { can } from "../utils/permissions";
 
 /* ═══════════════════════════════════════════════════════════════════
    VIDEO QUESTION — Records candidate's video answer
    Phase machine: preview → thinking → recording → done → uploading → saved
    ═══════════════════════════════════════════════════════════════════ */
-function VideoQuestion({ question, index, total, inviteId, onSave, onNext, isLast, onToast }) {
-  const videoRef  = useRef(null);
-  const mediaRef  = useRef(null);
+function VideoQuestion({
+  question,
+  index,
+  total,
+  inviteId,
+  onSave,
+  onNext,
+  isLast,
+  onToast,
+}) {
+  const videoRef = useRef(null);
+  const mediaRef = useRef(null);
   const chunksRef = useRef([]);
-  const recRef    = useRef(null);
+  const recRef = useRef(null);
 
-  const [phase,    setPhase]    = useState('preview');
+  const [phase, setPhase] = useState("preview");
   const [timeLeft, setTimeLeft] = useState(0);
-  const [blob,     setBlob]     = useState(null);
+  const [blob, setBlob] = useState(null);
   const [camReady, setCamReady] = useState(false);
-  const [error,    setError]    = useState('');
+  const [error, setError] = useState("");
 
-  const THINK_SECS  = question.question_view_time ?? 30;
+  const THINK_SECS = question.question_view_time ?? 30;
   const RECORD_SECS = question.question_time ?? 120;
 
-  useEffect(() => { startCam(); return () => stopCam(); }, []);
+  useEffect(() => {
+    startCam();
+    return () => stopCam();
+  }, []);
 
   useEffect(() => {
-    if (phase !== 'thinking' && phase !== 'recording') return;
-    const secs = phase === 'thinking' ? THINK_SECS : RECORD_SECS;
+    if (phase !== "thinking" && phase !== "recording") return;
+    const secs = phase === "thinking" ? THINK_SECS : RECORD_SECS;
     setTimeLeft(secs);
     const t = setInterval(() => {
-      setTimeLeft(p => {
+      setTimeLeft((p) => {
         if (p <= 1) {
           clearInterval(t);
-          if (phase === 'thinking')  startRecording();
-          if (phase === 'recording') stopRecording();
+          if (phase === "thinking") startRecording();
+          if (phase === "recording") stopRecording();
           return 0;
         }
         return p - 1;
@@ -53,7 +85,10 @@ function VideoQuestion({ question, index, total, inviteId, onSave, onNext, isLas
 
   const startCam = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.muted = true;
@@ -61,90 +96,101 @@ function VideoQuestion({ question, index, total, inviteId, onSave, onNext, isLas
       mediaRef.current = stream;
       setCamReady(true);
     } catch {
-      setError('Camera/mic access denied. Please allow access and reload.');
+      setError("Camera/mic access denied. Please allow access and reload.");
     }
   };
 
   const stopCam = () => {
-    mediaRef.current?.getTracks().forEach(t => t.stop());
+    mediaRef.current?.getTracks().forEach((t) => t.stop());
   };
 
   const startRecording = () => {
     if (!mediaRef.current) return;
     chunksRef.current = [];
-    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-      ? 'video/webm;codecs=vp9' : 'video/webm';
+    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+      ? "video/webm;codecs=vp9"
+      : "video/webm";
     const rec = new MediaRecorder(mediaRef.current, { mimeType: mime });
-    rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    rec.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
     rec.onstop = () => {
-      const b = new Blob(chunksRef.current, { type: 'video/webm' });
+      const b = new Blob(chunksRef.current, { type: "video/webm" });
       setBlob(b);
       if (videoRef.current) {
         videoRef.current.srcObject = null;
         videoRef.current.src = URL.createObjectURL(b);
         videoRef.current.muted = false;
       }
-      setPhase('done');
+      setPhase("done");
     };
     rec.start(200);
     recRef.current = rec;
-    setPhase('recording');
+    setPhase("recording");
   };
 
   const stopRecording = () => {
-    if (recRef.current?.state === 'recording') recRef.current.stop();
+    if (recRef.current?.state === "recording") recRef.current.stop();
   };
 
   const handleUpload = async () => {
     if (!blob) return;
-    setPhase('uploading');
+    setPhase("uploading");
     try {
-      const startRes = await API.post('/Webservice/sendInterviewQuestionWS', {
-        inviteID: inviteId, questionID: question.id,
+      const startRes = await API.post("/Webservice/sendInterviewQuestionWS", {
+        inviteID: inviteId,
+        questionID: question.id,
       });
       const responseID = startRes.data?.data?.responseID;
-      if (!responseID) throw new Error('No responseID');
+      if (!responseID) throw new Error("No responseID");
 
-      const file = new File([blob], `q${question.id}_answer.webm`, { type: 'video/webm' });
+      const file = new File([blob], `q${question.id}_answer.webm`, {
+        type: "video/webm",
+      });
       const form = new FormData();
-      form.append('video',      file);
-      form.append('questionID', question.id);
-      form.append('responseID', responseID);
+      form.append("video", file);
+      form.append("questionID", question.id);
+      form.append("responseID", responseID);
 
-      const base = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+      const base =
+        import.meta.env.VITE_API_URL || window.location.origin + "/api";
       const uploadRes = await fetch(`${base}/upload/interview-video`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         body: form,
       });
       const uploadData = await uploadRes.json();
 
       if (uploadData.code === 1) {
-        await API.post('/Webservice/saveInterviewVideo', {
-          responseID, src: uploadData.data?.url || '',
+        await API.post("/Webservice/saveInterviewVideo", {
+          responseID,
+          src: uploadData.data?.url || "",
         });
         onSave(question.id, uploadData.data?.url);
-        setPhase('saved');
+        setPhase("saved");
       } else {
-        throw new Error('Upload failed');
+        throw new Error("Upload failed");
       }
     } catch {
-      setError('Upload failed. Please retry.');
-      setPhase('done');
+      setError("Upload failed. Please retry.");
+      setPhase("done");
     }
   };
 
   const retry = () => {
-    setBlob(null); setError(''); setPhase('preview');
+    setBlob(null);
+    setError("");
+    setPhase("preview");
     if (videoRef.current) {
-      videoRef.current.src = '';
+      videoRef.current.src = "";
       videoRef.current.srcObject = null;
       videoRef.current.muted = true;
     }
     startCam();
   };
 
-  const fmt = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const fmt = (s) =>
+    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   return (
     <div className="ivq">
@@ -154,7 +200,10 @@ function VideoQuestion({ question, index, total, inviteId, onSave, onNext, isLas
           Question {index + 1} of {total}
         </div>
         <div className="ivq-prog-track">
-          <div className="ivq-prog-fill" style={{ width: `${((index + 1) / total) * 100}%` }}/>
+          <div
+            className="ivq-prog-fill"
+            style={{ width: `${((index + 1) / total) * 100}%` }}
+          />
         </div>
       </div>
 
@@ -171,64 +220,76 @@ function VideoQuestion({ question, index, total, inviteId, onSave, onNext, isLas
 
       {error && (
         <div className="ivq-error">
-          <RiAlertLine size={14}/>{error}
+          <RiAlertLine size={14} />
+          {error}
         </div>
       )}
 
       {/* Video preview */}
       <div className="ivq-video-wrap">
-        <video ref={videoRef} autoPlay playsInline className="ivq-video"/>
-        {phase === 'recording' && (
+        <video ref={videoRef} autoPlay playsInline className="ivq-video" />
+        {phase === "recording" && (
           <div className="ivq-rec-pill">
-            <span className="ivq-rec-dot"/>
+            <span className="ivq-rec-dot" />
             REC · {fmt(timeLeft)}
           </div>
         )}
-        {phase === 'thinking' && (
+        {phase === "thinking" && (
           <div className="ivq-think-pill">
-            <RiTimeLine size={13}/>Think · {fmt(timeLeft)}
+            <RiTimeLine size={13} />
+            Think · {fmt(timeLeft)}
           </div>
         )}
       </div>
 
       {/* Controls */}
       <div className="ivq-ctrl">
-        {phase === 'preview' && (
-          <button className="iv-btn iv-btn--primary"
-                  onClick={() => setPhase('thinking')}
-                  disabled={!camReady}>
-            <RiPlayFill size={14}/>
+        {phase === "preview" && (
+          <button
+            className="iv-btn iv-btn--primary"
+            onClick={() => setPhase("thinking")}
+            disabled={!camReady}
+          >
+            <RiPlayFill size={14} />
             {camReady
-              ? (THINK_SECS > 0 ? 'Start (think first)' : 'Start recording')
-              : 'Waiting for camera…'}
+              ? THINK_SECS > 0
+                ? "Start (think first)"
+                : "Start recording"
+              : "Waiting for camera…"}
           </button>
         )}
-        {phase === 'thinking' && (
+        {phase === "thinking" && (
           <button className="iv-btn iv-btn--primary" onClick={startRecording}>
-            <RiCameraLine size={14}/>Start recording now
+            <RiCameraLine size={14} />
+            Start recording now
           </button>
         )}
-        {phase === 'recording' && (
+        {phase === "recording" && (
           <button className="iv-btn iv-btn--danger" onClick={stopRecording}>
-            <RiStopCircleLine size={14}/>Stop recording
+            <RiStopCircleLine size={14} />
+            Stop recording
           </button>
         )}
-        {phase === 'done' && (
+        {phase === "done" && (
           <>
             <button className="iv-btn iv-btn--ghost" onClick={retry}>
-              <RiRefreshLine size={13}/>Retry
+              <RiRefreshLine size={13} />
+              Retry
             </button>
             <button className="iv-btn iv-btn--primary" onClick={handleUpload}>
-              <RiUploadLine size={14}/>Upload &amp; {isLast ? 'Finish' : 'Next'}
+              <RiUploadLine size={14} />
+              Upload &amp; {isLast ? "Finish" : "Next"}
             </button>
           </>
         )}
-        {phase === 'uploading' && (
-          <button className="iv-btn iv-btn--primary" disabled>Uploading…</button>
+        {phase === "uploading" && (
+          <button className="iv-btn iv-btn--primary" disabled>
+            Uploading…
+          </button>
         )}
-        {phase === 'saved' && (
+        {phase === "saved" && (
           <button className="iv-btn iv-btn--primary" onClick={onNext}>
-            {isLast ? 'Finish interview' : 'Next question'}
+            {isLast ? "Finish interview" : "Next question"}
           </button>
         )}
       </div>
@@ -241,26 +302,30 @@ function VideoQuestion({ question, index, total, inviteId, onSave, onNext, isLas
    ═══════════════════════════════════════════════════════════════════ */
 function InterviewAttempt({ interview, onBack, onToast }) {
   const [questions, setQuestions] = useState([]);
-  const [current,   setCurrent]   = useState(0);
-  const [loading,   setLoading]   = useState(true);
-  const [finished,  setFinished]  = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [finished, setFinished] = useState(false);
   const inviteId = interview.invite_id || interview.id;
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const load = async () => {
     try {
-      const res = await API.get('/Webservice/getInterviewQuestions', {
+      const res = await API.get("/Webservice/getInterviewQuestions", {
         params: { interviewID: interview.interview_id || interview.id },
       });
       if (res.data.code === 1) setQuestions(res.data.data || []);
-    } catch {}
+    } catch (err) {
+  console.error(err);
+}
     setLoading(false);
   };
 
   const handleNext = () => {
     if (current + 1 >= questions.length) setFinished(true);
-    else setCurrent(p => p + 1);
+    else setCurrent((p) => p + 1);
   };
 
   if (loading) return <div className="iv-state">Loading interview…</div>;
@@ -269,14 +334,16 @@ function InterviewAttempt({ interview, onBack, onToast }) {
     return (
       <div className="iva-done">
         <div className="iva-done-icon">
-          <RiCheckLine size={32}/>
+          <RiCheckLine size={32} />
         </div>
         <h2 className="iva-done-title">Interview completed</h2>
         <p className="iva-done-sub">
-          Your responses have been submitted successfully. The team will review them shortly.
+          Your responses have been submitted successfully. The team will review
+          them shortly.
         </p>
         <button className="iv-btn iv-btn--primary" onClick={onBack}>
-          <RiArrowLeftLine size={13}/>Back to interviews
+          <RiArrowLeftLine size={13} />
+          Back to interviews
         </button>
       </div>
     );
@@ -285,11 +352,16 @@ function InterviewAttempt({ interview, onBack, onToast }) {
   if (questions.length === 0) {
     return (
       <div className="iva-done">
-        <div className="iv-empty-icon"><RiVideoLine size={26}/></div>
+        <div className="iv-empty-icon">
+          <RiVideoLine size={26} />
+        </div>
         <h2 className="iva-done-title">No questions yet</h2>
-        <p className="iva-done-sub">This interview has no questions configured.</p>
+        <p className="iva-done-sub">
+          This interview has no questions configured.
+        </p>
         <button className="iv-btn iv-btn--ghost" onClick={onBack}>
-          <RiArrowLeftLine size={13}/>Back
+          <RiArrowLeftLine size={13} />
+          Back
         </button>
       </div>
     );
@@ -316,53 +388,80 @@ function InterviewAttempt({ interview, onBack, onToast }) {
 function InterviewFormModal({ interview, onClose, onSaved, onToast }) {
   const isEdit = !!interview;
   const [form, setForm] = useState({
-    name:        interview?.name        || '',
-    description: interview?.description || '',
-    time:        interview?.time        ?? 0,
-    visibility:  interview?.visibility  ?? 0,
+    name: interview?.name || "",
+    description: interview?.description || "",
+    time: interview?.time ?? 0,
+    visibility: interview?.visibility ?? 0,
   });
   const [saving, setSaving] = useState(false);
-  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const f = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const save = async () => {
-    if (!form.name.trim()) { onToast?.('Interview name required.'); return; }
+    if (!form.name.trim()) {
+      onToast?.("Interview name required.");
+      return;
+    }
     setSaving(true);
     try {
-      if (isEdit) await API.post('/Webservice/updateInterviewDetail', { interviewID: interview.id, ...form });
-      else        await API.post('/Webservice/addInterview', form);
+      if (isEdit)
+        await API.post("/Webservice/updateInterviewDetail", {
+          interviewID: interview.id,
+          ...form,
+        });
+      else await API.post("/Webservice/addInterview", form);
       onSaved();
-    } catch { onToast?.('Failed to save.'); }
+    } catch {
+      onToast?.("Failed to save.");
+    }
     setSaving(false);
   };
 
   return (
     <Modal onClose={() => !saving && onClose()}>
       <div className="iv-modal-head">
-        <h2 className="iv-modal-title">{isEdit ? 'Edit interview' : 'New interview'}</h2>
+        <h2 className="iv-modal-title">
+          {isEdit ? "Edit interview" : "New interview"}
+        </h2>
         <button className="iv-modal-close" onClick={onClose} disabled={saving}>
-          <RiCloseLine size={16}/>
+          <RiCloseLine size={16} />
         </button>
       </div>
       <div className="iv-modal-body">
         <Field label="Interview name" required>
-          <input className="iv-input" autoFocus value={form.name}
-                 onChange={e => f('name', e.target.value)}
-                 placeholder="e.g. Frontend Developer Round 1"/>
+          <input
+            className="iv-input"
+            autoFocus
+            value={form.name}
+            onChange={(e) => f("name", e.target.value)}
+            placeholder="e.g. Frontend Developer Round 1"
+          />
         </Field>
         <Field label="Description">
-          <textarea className="iv-input" rows={3} value={form.description}
-                    onChange={e => f('description', e.target.value)}
-                    placeholder="Optional description…"/>
+          <textarea
+            className="iv-input"
+            rows={3}
+            value={form.description}
+            onChange={(e) => f("description", e.target.value)}
+            placeholder="Optional description…"
+          />
         </Field>
         <div className="iv-modal-row">
           <Field label="Time per question (seconds)">
-            <input className="iv-input" type="number" min={0} value={form.time}
-                   onChange={e => f('time', +e.target.value)}
-                   placeholder="0 = unlimited"/>
+            <input
+              className="iv-input"
+              type="number"
+              min={0}
+              value={form.time}
+              onChange={(e) => f("time", +e.target.value)}
+              placeholder="0 = unlimited"
+            />
           </Field>
           <Field label="Visibility">
-            <select className="iv-input" value={form.visibility}
-                    onChange={e => f('visibility', +e.target.value)}>
+            <select
+              className="iv-input"
+              value={form.visibility}
+              onChange={(e) => f("visibility", +e.target.value)}
+            >
               <option value={0}>Private</option>
               <option value={1}>Public</option>
             </select>
@@ -370,9 +469,16 @@ function InterviewFormModal({ interview, onClose, onSaved, onToast }) {
         </div>
       </div>
       <div className="iv-modal-foot">
-        <button className="iv-btn iv-btn--ghost" onClick={onClose}>Cancel</button>
-        <button className="iv-btn iv-btn--primary" onClick={save} disabled={saving}>
-          <RiCheckLine size={14}/>{saving ? 'Saving…' : isEdit ? 'Update' : 'Create'}
+        <button className="iv-btn iv-btn--ghost" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          className="iv-btn iv-btn--primary"
+          onClick={save}
+          disabled={saving}
+        >
+          <RiCheckLine size={14} />
+          {saving ? "Saving…" : isEdit ? "Update" : "Create"}
         </button>
       </div>
     </Modal>
@@ -384,45 +490,65 @@ function InterviewFormModal({ interview, onClose, onSaved, onToast }) {
    ═══════════════════════════════════════════════════════════════════ */
 function QuestionsModal({ interview, onClose, onToast }) {
   const [questions, setQuestions] = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [adding,    setAdding]    = useState(false);
-  const [saving,    setSaving]    = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
-  const [newQ, setNewQ] = useState({ text: '', question_time: 120, question_view_time: 30 });
+  const [newQ, setNewQ] = useState({
+    text: "",
+    question_time: 120,
+    question_view_time: 30,
+  });
 
-  useEffect(() => { loadQ(); }, []);
+  useEffect(() => {
+    loadQ();
+  }, []);
 
   const loadQ = async () => {
     setLoading(true);
     try {
-      const res = await API.get('/Webservice/getInterviewQuestions', { params: { interviewID: interview.id } });
+      const res = await API.get("/Webservice/getInterviewQuestions", {
+        params: { interviewID: interview.id },
+      });
       if (res.data.code === 1) setQuestions(res.data.data || []);
     } catch {}
     setLoading(false);
   };
 
   const addQuestion = async () => {
-    if (!newQ.text.trim()) { onToast?.('Question text required.'); return; }
+    if (!newQ.text.trim()) {
+      onToast?.("Question text required.");
+      return;
+    }
     setSaving(true);
     try {
-      await API.post('/Webservice/addInterviewQuestion', {
-        interviewID:        interview.id,
-        question_text:      newQ.text,
-        question_time:      newQ.question_time,
+      await API.post("/Webservice/addInterviewQuestion", {
+        interviewID: interview.id,
+        question_text: newQ.text,
+        question_time: newQ.question_time,
         question_view_time: newQ.question_view_time,
       });
       setAdding(false);
-      setNewQ({ text: '', question_time: 120, question_view_time: 30 });
+      setNewQ({ text: "", question_time: 120, question_view_time: 30 });
       loadQ();
-    } catch { onToast?.('Failed to add.'); }
+    } catch {
+      onToast?.("Failed to add.");
+    }
     setSaving(false);
   };
 
   const doDelete = async () => {
     if (!confirmDel) return;
-    const qID = confirmDel; setConfirmDel(null);
-    try { await API.post('/Webservice/deleteInterviewQuestion', { questionID: qID }); loadQ(); }
-    catch { onToast?.('Delete failed.'); }
+    const qID = confirmDel;
+    setConfirmDel(null);
+    try {
+      await API.post("/Webservice/deleteInterviewQuestion", {
+        questionID: qID,
+      });
+      loadQ();
+    } catch {
+      onToast?.("Delete failed.");
+    }
   };
 
   return (
@@ -431,7 +557,7 @@ function QuestionsModal({ interview, onClose, onToast }) {
         <div className="iv-modal-head">
           <h2 className="iv-modal-title">Questions · {interview.name}</h2>
           <button className="iv-modal-close" onClick={onClose}>
-            <RiCloseLine size={16}/>
+            <RiCloseLine size={16} />
           </button>
         </div>
         <div className="iv-modal-body">
@@ -451,9 +577,12 @@ function QuestionsModal({ interview, onClose, onToast }) {
                       Think: {q.question_view_time}s · Rec: {q.question_time}s
                     </span>
                   </div>
-                  <button className="iv-icon-btn iv-icon-btn--danger"
-                          onClick={() => setConfirmDel(q.id)} title="Delete">
-                    <RiDeleteBin6Line size={13}/>
+                  <button
+                    className="iv-icon-btn iv-icon-btn--danger"
+                    onClick={() => setConfirmDel(q.id)}
+                    title="Delete"
+                  >
+                    <RiDeleteBin6Line size={13} />
                   </button>
                 </article>
               ))}
@@ -461,32 +590,76 @@ function QuestionsModal({ interview, onClose, onToast }) {
               {adding ? (
                 <article className="ivmgr-q ivmgr-q--new">
                   <Field label="Question text" required>
-                    <textarea className="iv-input" rows={2} value={newQ.text}
-                              onChange={e => setNewQ(p => ({ ...p, text: e.target.value }))}
-                              placeholder="e.g. Tell us about yourself…"/>
+                    <textarea
+                      className="iv-input"
+                      rows={2}
+                      value={newQ.text}
+                      onChange={(e) =>
+                        setNewQ((p) => ({ ...p, text: e.target.value }))
+                      }
+                      placeholder="e.g. Tell us about yourself…"
+                    />
                   </Field>
                   <div className="iv-modal-row">
                     <Field label="Think time (sec)">
-                      <input className="iv-input" type="number" min={0}
-                             value={newQ.question_view_time}
-                             onChange={e => setNewQ(p => ({ ...p, question_view_time: +e.target.value }))}/>
+                      <input
+                        className="iv-input"
+                        type="number"
+                        min={0}
+                        value={newQ.question_view_time}
+                        onChange={(e) =>
+                          setNewQ((p) => ({
+                            ...p,
+                            question_view_time: +e.target.value,
+                          }))
+                        }
+                      />
                     </Field>
                     <Field label="Recording time (sec)">
-                      <input className="iv-input" type="number" min={10}
-                             value={newQ.question_time}
-                             onChange={e => setNewQ(p => ({ ...p, question_time: +e.target.value }))}/>
+                      <input
+                        className="iv-input"
+                        type="number"
+                        min={10}
+                        value={newQ.question_time}
+                        onChange={(e) =>
+                          setNewQ((p) => ({
+                            ...p,
+                            question_time: +e.target.value,
+                          }))
+                        }
+                      />
                     </Field>
                   </div>
-                  <div className="iv-modal-foot" style={{ paddingLeft: 0, paddingRight: 0, marginTop: 12, background: 'transparent', borderTop: 'none' }}>
-                    <button className="iv-btn iv-btn--ghost" onClick={() => setAdding(false)}>Cancel</button>
-                    <button className="iv-btn iv-btn--primary" onClick={addQuestion} disabled={saving}>
-                      <RiCheckLine size={14}/>{saving ? 'Saving…' : 'Add question'}
+                  <div
+                    className="iv-modal-foot"
+                    style={{
+                      paddingLeft: 0,
+                      paddingRight: 0,
+                      marginTop: 12,
+                      background: "transparent",
+                      borderTop: "none",
+                    }}
+                  >
+                    <button
+                      className="iv-btn iv-btn--ghost"
+                      onClick={() => setAdding(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="iv-btn iv-btn--primary"
+                      onClick={addQuestion}
+                      disabled={saving}
+                    >
+                      <RiCheckLine size={14} />
+                      {saving ? "Saving…" : "Add question"}
                     </button>
                   </div>
                 </article>
               ) : (
                 <button className="ivmgr-add" onClick={() => setAdding(true)}>
-                  <RiAddLine size={14}/>Add new question
+                  <RiAddLine size={14} />
+                  Add new question
                 </button>
               )}
             </>
@@ -499,9 +672,15 @@ function QuestionsModal({ interview, onClose, onToast }) {
           <h3 className="iv-modal-title">Delete question?</h3>
           <p className="iv-modal-msg">This action cannot be undone.</p>
           <div className="iv-modal-foot">
-            <button className="iv-btn iv-btn--ghost" onClick={() => setConfirmDel(null)}>Cancel</button>
+            <button
+              className="iv-btn iv-btn--ghost"
+              onClick={() => setConfirmDel(null)}
+            >
+              Cancel
+            </button>
             <button className="iv-btn iv-btn--danger" onClick={doDelete}>
-              <RiDeleteBin6Line size={13}/>Delete
+              <RiDeleteBin6Line size={13} />
+              Delete
             </button>
           </div>
         </Modal>
@@ -514,20 +693,24 @@ function QuestionsModal({ interview, onClose, onToast }) {
    INVITE MODAL
    ═══════════════════════════════════════════════════════════════════ */
 function InviteModal({ interview, onClose, onToast }) {
-  const [emailInput,  setEmailInput]  = useState('');
-  const [emails,      setEmails]      = useState([]);
-  const [expiryDays,  setExpiryDays]  = useState(7);
-  const [invList,     setInvList]     = useState([]);
-  const [tab,         setTab]         = useState('send');
-  const [sending,     setSending]     = useState(false);
+  const [emailInput, setEmailInput] = useState("");
+  const [emails, setEmails] = useState([]);
+  const [expiryDays, setExpiryDays] = useState(7);
+  const [invList, setInvList] = useState([]);
+  const [tab, setTab] = useState("send");
+  const [sending, setSending] = useState(false);
   const [loadingList, setLoadingList] = useState(false);
 
-  useEffect(() => { if (tab === 'list') loadList(); }, [tab]);
+  useEffect(() => {
+    if (tab === "list") loadList();
+  }, [tab]);
 
   const loadList = async () => {
     setLoadingList(true);
     try {
-      const res = await API.get('/Webservice/getInterviewInvitedList', { params: { interviewID: interview.id } });
+      const res = await API.get("/Webservice/getInterviewInvitedList", {
+        params: { interviewID: interview.id },
+      });
       if (res.data.code === 1) setInvList(res.data.data || []);
     } catch {}
     setLoadingList(false);
@@ -535,25 +718,43 @@ function InviteModal({ interview, onClose, onToast }) {
 
   const addEmail = () => {
     const e = emailInput.trim().toLowerCase();
-    if (!e || !e.includes('@')) { onToast?.('Enter a valid email.'); return; }
-    if (emails.includes(e))     { onToast?.('Already added.'); return; }
-    setEmails(p => [...p, e]); setEmailInput('');
+    if (!e || !e.includes("@")) {
+      onToast?.("Enter a valid email.");
+      return;
+    }
+    if (emails.includes(e)) {
+      onToast?.("Already added.");
+      return;
+    }
+    setEmails((p) => [...p, e]);
+    setEmailInput("");
   };
 
   const sendInvites = async () => {
-    if (!emails.length) { onToast?.('Add at least one email.'); return; }
+    if (!emails.length) {
+      onToast?.("Add at least one email.");
+      return;
+    }
     setSending(true);
     try {
-      const res = await API.post('/Webservice/shareInterviewInvite', {
-        interviewID: interview.id, emails, expiry_days: expiryDays,
+      const res = await API.post("/Webservice/shareInterviewInvite", {
+        interviewID: interview.id,
+        emails,
+        expiry_days: expiryDays,
       });
       if (res.data.code === 1) {
-        onToast?.(`Invites sent to ${emails.length} email${emails.length !== 1 ? 's' : ''}`, 'ok');
-        setEmails([]); setTab('list');
+        onToast?.(
+          `Invites sent to ${emails.length} email${emails.length !== 1 ? "s" : ""}`,
+          "ok",
+        );
+        setEmails([]);
+        setTab("list");
       } else {
-        onToast?.(res.data.message || 'Failed to send.');
+        onToast?.(res.data.message || "Failed to send.");
       }
-    } catch { onToast?.('Send failed.'); }
+    } catch {
+      onToast?.("Send failed.");
+    }
     setSending(false);
   };
 
@@ -561,53 +762,98 @@ function InviteModal({ interview, onClose, onToast }) {
     <Modal large onClose={onClose}>
       <div className="iv-modal-head">
         <h2 className="iv-modal-title">Invites · {interview.name}</h2>
-        <button className="iv-modal-close" onClick={onClose}><RiCloseLine size={16}/></button>
+        <button className="iv-modal-close" onClick={onClose}>
+          <RiCloseLine size={16} />
+        </button>
       </div>
       <div className="iv-modal-body">
         <div className="iv-tabs">
           {[
-            { key: 'send', label: 'Send invites', icon: <RiSendPlaneLine size={12}/> },
-            { key: 'list', label: 'Invited list',  icon: <RiListUnordered size={12}/> },
-          ].map(t => (
-            <button key={t.key} className={`iv-tab ${tab === t.key ? 'iv-tab--active' : ''}`}
-                    onClick={() => setTab(t.key)}>
-              {t.icon}{t.label}
+            {
+              key: "send",
+              label: "Send invites",
+              icon: <RiSendPlaneLine size={12} />,
+            },
+            {
+              key: "list",
+              label: "Invited list",
+              icon: <RiListUnordered size={12} />,
+            },
+          ].map((t) => (
+            <button
+              key={t.key}
+              className={`iv-tab ${tab === t.key ? "iv-tab--active" : ""}`}
+              onClick={() => setTab(t.key)}
+            >
+              {t.icon}
+              {t.label}
             </button>
           ))}
         </div>
 
-        {tab === 'send' ? (
+        {tab === "send" ? (
           <>
             <div className="iv-input-row">
-              <input className="iv-input" type="email" placeholder="Enter email address"
-                     value={emailInput}
-                     onChange={e => setEmailInput(e.target.value)}
-                     onKeyDown={e => e.key === 'Enter' && addEmail()}/>
-              <button className="iv-btn iv-btn--primary" onClick={addEmail}>Add</button>
+              <input
+                className="iv-input"
+                type="email"
+                placeholder="Enter email address"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addEmail()}
+              />
+              <button className="iv-btn iv-btn--primary" onClick={addEmail}>
+                Add
+              </button>
             </div>
             <Field label="Link expiry (days)">
-              <input className="iv-input" type="number" min={1} max={30}
-                     value={expiryDays}
-                     onChange={e => setExpiryDays(+e.target.value)}
-                     style={{ maxWidth: 120 }}/>
+              <input
+                className="iv-input"
+                type="number"
+                min={1}
+                max={30}
+                value={expiryDays}
+                onChange={(e) => setExpiryDays(+e.target.value)}
+                style={{ maxWidth: 120 }}
+              />
             </Field>
             {emails.length > 0 && (
               <div className="iv-chips">
-                {emails.map(e => (
+                {emails.map((e) => (
                   <span key={e} className="iv-chip">
-                    <RiMailLine size={11}/>{e}
-                    <button onClick={() => setEmails(p => p.filter(x => x !== e))}>
-                      <RiCloseLine size={11}/>
+                    <RiMailLine size={11} />
+                    {e}
+                    <button
+                      onClick={() => setEmails((p) => p.filter((x) => x !== e))}
+                    >
+                      <RiCloseLine size={11} />
                     </button>
                   </span>
                 ))}
               </div>
             )}
-            <div className="iv-modal-foot" style={{ paddingLeft: 0, paddingRight: 0, marginTop: 12, background: 'transparent', borderTop: 'none' }}>
-              <button className="iv-btn iv-btn--ghost" onClick={onClose}>Cancel</button>
-              <button className="iv-btn iv-btn--primary" onClick={sendInvites} disabled={sending || !emails.length}>
-                <RiSendPlaneLine size={13}/>
-                {sending ? 'Sending…' : `Send to ${emails.length} email${emails.length !== 1 ? 's' : ''}`}
+            <div
+              className="iv-modal-foot"
+              style={{
+                paddingLeft: 0,
+                paddingRight: 0,
+                marginTop: 12,
+                background: "transparent",
+                borderTop: "none",
+              }}
+            >
+              <button className="iv-btn iv-btn--ghost" onClick={onClose}>
+                Cancel
+              </button>
+              <button
+                className="iv-btn iv-btn--primary"
+                onClick={sendInvites}
+                disabled={sending || !emails.length}
+              >
+                <RiSendPlaneLine size={13} />
+                {sending
+                  ? "Sending…"
+                  : `Send to ${emails.length} email${emails.length !== 1 ? "s" : ""}`}
               </button>
             </div>
           </>
@@ -619,22 +865,48 @@ function InviteModal({ interview, onClose, onToast }) {
           <div className="iv-table-wrap">
             <table className="iv-table">
               <thead>
-                <tr><th>Email</th><th>Invited</th><th>Expires</th><th>Status</th><th>Completed</th></tr>
+                <tr>
+                  <th>Email</th>
+                  <th>Invited</th>
+                  <th>Expires</th>
+                  <th>Status</th>
+                  <th>Completed</th>
+                </tr>
               </thead>
               <tbody>
-                {invList.map(inv => (
+                {invList.map((inv) => (
                   <tr key={inv.id}>
                     <td>{inv.email}</td>
-                    <td>{inv.invited_on ? new Date(inv.invited_on).toLocaleDateString('en-IN') : '—'}</td>
-                    <td>{inv.expire_on  ? new Date(inv.expire_on).toLocaleDateString('en-IN')  : '—'}</td>
                     <td>
-                      <span className={`iv-st iv-st--${inv.invite_status == 1 ? 'ok' : inv.invite_status == 2 ? 'fail' : 'pend'}`}>
-                        {inv.invite_status == 1 ? 'Sent' : inv.invite_status == 2 ? 'Failed' : 'Pending'}
+                      {inv.invited_on
+                        ? new Date(inv.invited_on).toLocaleDateString("en-IN")
+                        : "—"}
+                    </td>
+                    <td>
+                      {inv.expire_on
+                        ? new Date(inv.expire_on).toLocaleDateString("en-IN")
+                        : "—"}
+                    </td>
+                    <td>
+                      <span
+                        className={`iv-st iv-st--${inv.invite_status == 1 ? "ok" : inv.invite_status == 2 ? "fail" : "pend"}`}
+                      >
+                        {inv.invite_status == 1
+                          ? "Sent"
+                          : inv.invite_status == 2
+                            ? "Failed"
+                            : "Pending"}
                       </span>
                     </td>
                     <td>
-                      <span className={`iv-st iv-st--${inv.completed == 2 ? 'ok' : 'pend'}`}>
-                        {inv.completed == 2 ? 'Done' : inv.completed == 1 ? 'In progress' : 'Not started'}
+                      <span
+                        className={`iv-st iv-st--${inv.completed == 2 ? "ok" : "pend"}`}
+                      >
+                        {inv.completed == 2
+                          ? "Done"
+                          : inv.completed == 1
+                            ? "In progress"
+                            : "Not started"}
                       </span>
                     </td>
                   </tr>
@@ -654,8 +926,12 @@ function InviteModal({ interview, onClose, onToast }) {
 function ChartsModal({ interview, onClose }) {
   const [data, setData] = useState(null);
   useEffect(() => {
-    API.get('/Webservice/getOverViewChartsInterview', { params: { interviewID: interview.id } })
-      .then(r => { if (r.data.code === 1) setData(r.data.data); })
+    API.get("/Webservice/getOverViewChartsInterview", {
+      params: { interviewID: interview.id },
+    })
+      .then((r) => {
+        if (r.data.code === 1) setData(r.data.data);
+      })
       .catch(() => {});
   }, []);
 
@@ -663,7 +939,9 @@ function ChartsModal({ interview, onClose }) {
     <Modal large onClose={onClose}>
       <div className="iv-modal-head">
         <h2 className="iv-modal-title">Analytics · {interview.name}</h2>
-        <button className="iv-modal-close" onClick={onClose}><RiCloseLine size={16}/></button>
+        <button className="iv-modal-close" onClick={onClose}>
+          <RiCloseLine size={16} />
+        </button>
       </div>
       <div className="iv-modal-body">
         {!data ? (
@@ -671,12 +949,36 @@ function ChartsModal({ interview, onClose }) {
         ) : (
           <div className="iv-chart-grid">
             {[
-              { num: data.total ?? 0,                       lbl: 'Invited',   c1: '#06B6D4', c2: '#0EA5E9' },
-              { num: data.started ?? 0,                     lbl: 'Started',   c1: '#F59E0B', c2: '#EF4444' },
-              { num: data.done ?? 0,                        lbl: 'Completed', c1: '#10B981', c2: '#059669' },
-              { num: (data.total || 0) - (data.done || 0),  lbl: 'Pending',   c1: '#EF4444', c2: '#DC2626' },
-            ].map(c => (
-              <div key={c.lbl} className="iv-chart-card" style={{ '--c1': c.c1, '--c2': c.c2 }}>
+              {
+                num: data.total ?? 0,
+                lbl: "Invited",
+                c1: "#06B6D4",
+                c2: "#0EA5E9",
+              },
+              {
+                num: data.started ?? 0,
+                lbl: "Started",
+                c1: "#F59E0B",
+                c2: "#EF4444",
+              },
+              {
+                num: data.done ?? 0,
+                lbl: "Completed",
+                c1: "#10B981",
+                c2: "#059669",
+              },
+              {
+                num: (data.total || 0) - (data.done || 0),
+                lbl: "Pending",
+                c1: "#EF4444",
+                c2: "#DC2626",
+              },
+            ].map((c) => (
+              <div
+                key={c.lbl}
+                className="iv-chart-card"
+                style={{ "--c1": c.c1, "--c2": c.c2 }}
+              >
                 <div className="iv-chart-num">{c.num}</div>
                 <div className="iv-chart-lbl">{c.lbl}</div>
               </div>
@@ -685,7 +987,9 @@ function ChartsModal({ interview, onClose }) {
         )}
       </div>
       <div className="iv-modal-foot">
-        <button className="iv-btn iv-btn--ghost" onClick={onClose}>Close</button>
+        <button className="iv-btn iv-btn--ghost" onClick={onClose}>
+          Close
+        </button>
       </div>
     </Modal>
   );
@@ -696,16 +1000,18 @@ function ChartsModal({ interview, onClose }) {
    ═══════════════════════════════════════════════════════════════════ */
 function SubmissionsModal({ interview, onClose }) {
   const [submissions, setSubmissions] = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [expanded,    setExpanded]    = useState(null);   // invite_id of expanded card
-  const [search,      setSearch]      = useState('');
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(null); // invite_id of expanded card
+  const [search, setSearch] = useState("");
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await API.get('/Webservice/getInterviewSubmissions', {
+      const res = await API.get("/Webservice/getInterviewSubmissions", {
         params: { interviewID: interview.id },
       });
       if (res.data.code === 1) {
@@ -719,17 +1025,27 @@ function SubmissionsModal({ interview, onClose }) {
   };
 
   const filtered = search.trim()
-    ? submissions.filter(s => (s.email || '').toLowerCase().includes(search.toLowerCase()))
+    ? submissions.filter((s) =>
+        (s.email || "").toLowerCase().includes(search.toLowerCase()),
+      )
     : submissions;
 
-  const completed = submissions.filter(s => s.completed === 2).length;
-  const inProgress = submissions.filter(s => s.completed === 1).length;
-  const totalVideos = submissions.reduce((sum, s) =>
-    sum + (s.responses || []).reduce((vs, r) => vs + (r.videos?.length || 0), 0), 0);
+  const completed = submissions.filter((s) => s.completed === 2).length;
+  const inProgress = submissions.filter((s) => s.completed === 1).length;
+  const totalVideos = submissions.reduce(
+    (sum, s) =>
+      sum +
+      (s.responses || []).reduce((vs, r) => vs + (r.videos?.length || 0), 0),
+    0,
+  );
 
-  const formatDate = (iso) => iso
-    ? new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
-    : '—';
+  const formatDate = (iso) =>
+    iso
+      ? new Date(iso).toLocaleString("en-IN", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : "—";
 
   return (
     <Modal large onClose={onClose}>
@@ -737,25 +1053,28 @@ function SubmissionsModal({ interview, onClose }) {
         <div>
           <h2 className="iv-modal-title">Submissions · {interview.name}</h2>
           <p className="iv-sub-meta">
-            {completed} completed · {inProgress} in progress · {totalVideos} {totalVideos === 1 ? 'video' : 'videos'}
+            {completed} completed · {inProgress} in progress · {totalVideos}{" "}
+            {totalVideos === 1 ? "video" : "videos"}
           </p>
         </div>
-        <button className="iv-modal-close" onClick={onClose}><RiCloseLine size={16}/></button>
+        <button className="iv-modal-close" onClick={onClose}>
+          <RiCloseLine size={16} />
+        </button>
       </div>
 
       <div className="iv-modal-body iv-sub-body">
         {/* Search bar */}
         {submissions.length > 0 && (
           <div className="iv-sub-search">
-            <RiSearchLine size={13}/>
+            <RiSearchLine size={13} />
             <input
               placeholder="Search by email…"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
             />
             {search && (
-              <button onClick={() => setSearch('')} className="iv-sub-clear">
-                <RiCloseLine size={12}/>
+              <button onClick={() => setSearch("")} className="iv-sub-clear">
+                <RiCloseLine size={12} />
               </button>
             )}
           </div>
@@ -765,56 +1084,75 @@ function SubmissionsModal({ interview, onClose }) {
           <div className="iv-state">Loading submissions…</div>
         ) : submissions.length === 0 ? (
           <div className="iv-sub-empty">
-            <div className="iv-sub-empty-icon"><RiUserVoiceLine size={28}/></div>
+            <div className="iv-sub-empty-icon">
+              <RiUserVoiceLine size={28} />
+            </div>
             <div className="iv-sub-empty-title">No submissions yet</div>
             <div className="iv-sub-empty-msg">
-              Once invited candidates record and submit their videos, they'll appear here.
+              Once invited candidates record and submit their videos, they'll
+              appear here.
             </div>
           </div>
         ) : filtered.length === 0 ? (
           <div className="iv-state">No matches for "{search}".</div>
         ) : (
           <div className="iv-sub-list">
-            {filtered.map(sub => {
-              const isOpen   = expanded === sub.invite_id;
-              const isDone   = sub.completed === 2;
+            {filtered.map((sub) => {
+              const isOpen = expanded === sub.invite_id;
+              const isDone = sub.completed === 2;
               return (
-                <div key={sub.invite_id} className={`iv-sub-card ${isOpen ? 'iv-sub-card--open' : ''}`}>
+                <div
+                  key={sub.invite_id}
+                  className={`iv-sub-card ${isOpen ? "iv-sub-card--open" : ""}`}
+                >
                   {/* Header — click to expand */}
                   <button
                     className="iv-sub-head"
                     onClick={() => setExpanded(isOpen ? null : sub.invite_id)}
                   >
                     <div className="iv-sub-avatar">
-                      {(sub.email || '?')[0].toUpperCase()}
+                      {(sub.email || "?")[0].toUpperCase()}
                     </div>
                     <div className="iv-sub-info">
                       <div className="iv-sub-email">{sub.email}</div>
                       <div className="iv-sub-meta-row">
-                        <span className={`iv-st iv-st--${isDone ? 'ok' : 'pend'}`}>
-                          {isDone ? 'Completed' : 'In progress'}
+                        <span
+                          className={`iv-st iv-st--${isDone ? "ok" : "pend"}`}
+                        >
+                          {isDone ? "Completed" : "In progress"}
                         </span>
                         <span className="iv-sub-count">
-                          {sub.response_count} {sub.response_count === 1 ? 'response' : 'responses'}
+                          {sub.response_count}{" "}
+                          {sub.response_count === 1 ? "response" : "responses"}
                         </span>
                         {isDone && (
                           <span className="iv-sub-time">
-                            <RiTimeLine size={11}/> {formatDate(sub.complete_on)}
+                            <RiTimeLine size={11} />{" "}
+                            {formatDate(sub.complete_on)}
                           </span>
                         )}
                       </div>
                     </div>
-                    {isOpen ? <RiArrowDownSLine size={16}/> : <RiArrowRightSLine size={16}/>}
+                    {isOpen ? (
+                      <RiArrowDownSLine size={16} />
+                    ) : (
+                      <RiArrowRightSLine size={16} />
+                    )}
                   </button>
 
                   {/* Expanded — show videos per question */}
                   {isOpen && (
                     <div className="iv-sub-detail">
                       {(sub.responses || []).length === 0 ? (
-                        <div className="iv-sub-no-resp">No responses recorded yet.</div>
+                        <div className="iv-sub-no-resp">
+                          No responses recorded yet.
+                        </div>
                       ) : (
                         sub.responses.map((resp, qIdx) => (
-                          <div key={resp.response_id} className="iv-sub-question">
+                          <div
+                            key={resp.response_id}
+                            className="iv-sub-question"
+                          >
                             <div className="iv-sub-q-head">
                               <div className="iv-sub-q-num">Q{qIdx + 1}</div>
                               <div className="iv-sub-q-text">
@@ -827,11 +1165,12 @@ function SubmissionsModal({ interview, onClose }) {
 
                             {(resp.videos || []).length === 0 ? (
                               <div className="iv-sub-no-video">
-                                <RiAlertLine size={12}/> No video recorded for this question.
+                                <RiAlertLine size={12} /> No video recorded for
+                                this question.
                               </div>
                             ) : (
                               <div className="iv-sub-videos">
-                                {resp.videos.map(v => (
+                                {resp.videos.map((v) => (
                                   <div key={v.id} className="iv-sub-video-wrap">
                                     <video
                                       controls
@@ -839,11 +1178,13 @@ function SubmissionsModal({ interview, onClose }) {
                                       className="iv-sub-video"
                                       src={v.src}
                                     >
-                                      Your browser doesn't support video playback.
+                                      Your browser doesn't support video
+                                      playback.
                                     </video>
                                     <div className="iv-sub-video-actions">
                                       <span className="iv-sub-video-meta">
-                                        <RiVolumeUpLine size={11}/> Recorded {formatDate(v.added_on)}
+                                        <RiVolumeUpLine size={11} /> Recorded{" "}
+                                        {formatDate(v.added_on)}
                                       </span>
                                       <a
                                         href={v.src}
@@ -852,7 +1193,7 @@ function SubmissionsModal({ interview, onClose }) {
                                         rel="noreferrer"
                                         className="iv-sub-download"
                                       >
-                                        <RiDownloadLine size={11}/> Download
+                                        <RiDownloadLine size={11} /> Download
                                       </a>
                                     </div>
                                   </div>
@@ -872,7 +1213,9 @@ function SubmissionsModal({ interview, onClose }) {
       </div>
 
       <div className="iv-modal-foot">
-        <button className="iv-btn iv-btn--ghost" onClick={onClose}>Close</button>
+        <button className="iv-btn iv-btn--ghost" onClick={onClose}>
+          Close
+        </button>
       </div>
     </Modal>
   );
@@ -884,8 +1227,10 @@ function SubmissionsModal({ interview, onClose }) {
 function Modal({ children, onClose, large, small }) {
   return (
     <div className="iv-overlay" onClick={onClose}>
-      <div className={`iv-modal ${large ? 'iv-modal--lg' : ''} ${small ? 'iv-modal--sm' : ''}`}
-           onClick={e => e.stopPropagation()}>
+      <div
+        className={`iv-modal ${large ? "iv-modal--lg" : ""} ${small ? "iv-modal--sm" : ""}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         {children}
       </div>
     </div>
@@ -895,7 +1240,10 @@ function Modal({ children, onClose, large, small }) {
 function Field({ label, required, children }) {
   return (
     <div className="iv-field">
-      <label className="iv-label">{label}{required && <span className="iv-req">*</span>}</label>
+      <label className="iv-label">
+        {label}
+        {required && <span className="iv-req">*</span>}
+      </label>
       {children}
     </div>
   );
@@ -908,7 +1256,7 @@ function useToast() {
     const t = setTimeout(() => setToast(null), 2800);
     return () => clearTimeout(t);
   }, [toast]);
-  return { toast, show: (text, type = 'err') => setToast({ text, type }) };
+  return { toast, show: (text, type = "err") => setToast({ text, type }) };
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -916,45 +1264,56 @@ function useToast() {
    ═══════════════════════════════════════════════════════════════════ */
 export default function Interview() {
   const [interviews, setInterviews] = useState([]);
-  const [search,     setSearch]     = useState('');
-  const [loading,    setLoading]    = useState(true);
-  const [selInv,     setSelInv]     = useState(null);
-  const [activeTab,  setActiveTab]  = useState('admin');
-  const [showAdd,    setShowAdd]    = useState(false);
-  const [editInv,    setEditInv]    = useState(null);
-  const [qMgrInv,    setQMgrInv]    = useState(null);
-  const [invInv,     setInvInv]     = useState(null);
-  const [chartInv,   setChartInv]   = useState(null);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [selInv, setSelInv] = useState(null);
+  const [activeTab, setActiveTab] = useState("admin");
+  const [showAdd, setShowAdd] = useState(false);
+  const [editInv, setEditInv] = useState(null);
+  const [qMgrInv, setQMgrInv] = useState(null);
+  const [invInv, setInvInv] = useState(null);
+  const [chartInv, setChartInv] = useState(null);
   const [submissionsInv, setSubmissionsInv] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
 
   const { toast, show } = useToast();
 
   /* "Admin panel" = anyone who can manage interviews — admin, trainer, HR recruiter */
-  const isAdmin = can('interview.manage') || can('interview.review') || can('courses.manage');
+  const isAdmin =
+    can("interview.manage") || can("interview.review") || can("courses.manage");
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await API.get('/Webservices/getAllInterviewList');
+      const res = await API.get("/Webservices/getAllInterviewList");
       if (res.data.code === 1) setInterviews(res.data.data || []);
-    } catch {}
+ } catch (err) {
+  console.error(err);
+}
     setLoading(false);
   };
 
   const doDelete = async () => {
     if (!confirmDel) return;
-    const iv = confirmDel; setConfirmDel(null);
+    const iv = confirmDel;
+    setConfirmDel(null);
     try {
-      await API.post('/Webservice/updateInterviewDetail', { interviewID: iv.id, status: 0 });
+      await API.post("/Webservice/updateInterviewDetail", {
+        interviewID: iv.id,
+        status: 0,
+      });
       load();
-    } catch { show('Delete failed.'); }
+    } catch {
+      show("Delete failed.");
+    }
   };
 
-  const filtered = interviews.filter(iv =>
-    (iv.name || '').toLowerCase().includes(search.toLowerCase())
+  const filtered = interviews.filter((iv) =>
+    (iv.name || "").toLowerCase().includes(search.toLowerCase()),
   );
 
   /* ── Attempt view ── */
@@ -963,14 +1322,26 @@ export default function Interview() {
       <AppShell>
         <style>{CSS}</style>
         <div className="iva-header">
-          <button className="iv-btn iv-btn--ghost" onClick={() => { setSelInv(null); load(); }}>
-            <RiArrowLeftLine size={14}/>Exit
+          <button
+            className="iv-btn iv-btn--ghost"
+            onClick={() => {
+              setSelInv(null);
+              load();
+            }}
+          >
+            <RiArrowLeftLine size={14} />
+            Exit
           </button>
           <h1 className="iva-h-title">{selInv.name}</h1>
         </div>
-        <InterviewAttempt interview={selInv}
-                          onBack={() => { setSelInv(null); load(); }}
-                          onToast={show}/>
+        <InterviewAttempt
+          interview={selInv}
+          onBack={() => {
+            setSelInv(null);
+            load();
+          }}
+          onToast={show}
+        />
       </AppShell>
     );
   }
@@ -983,18 +1354,22 @@ export default function Interview() {
       <header className="iv-hero">
         <div>
           <div className="iv-eyebrow">
-            {isAdmin ? 'Admin · Learner' : 'Your assignments'}
+            {isAdmin ? "Admin · Learner" : "Your assignments"}
           </div>
           <h1 className="iv-title">Interviews.</h1>
           <p className="iv-sub">
             {loading
-              ? 'Loading…'
-              : `${interviews.length} ${interviews.length === 1 ? 'interview' : 'interviews'} ${isAdmin ? 'in the catalog' : 'available to you'}.`}
+              ? "Loading…"
+              : `${interviews.length} ${interviews.length === 1 ? "interview" : "interviews"} ${isAdmin ? "in the catalog" : "available to you"}.`}
           </p>
         </div>
         {isAdmin && (
-          <button className="iv-btn iv-btn--primary" onClick={() => setShowAdd(true)}>
-            <RiAddLine size={14}/>New interview
+          <button
+            className="iv-btn iv-btn--primary"
+            onClick={() => setShowAdd(true)}
+          >
+            <RiAddLine size={14} />
+            New interview
           </button>
         )}
       </header>
@@ -1002,7 +1377,11 @@ export default function Interview() {
       {/* Toast */}
       {toast && (
         <div className={`iv-toast iv-toast--${toast.type}`}>
-          {toast.type === 'ok' ? <RiCheckLine size={14}/> : <RiAlertLine size={14}/>}
+          {toast.type === "ok" ? (
+            <RiCheckLine size={14} />
+          ) : (
+            <RiAlertLine size={14} />
+          )}
           <span>{toast.text}</span>
         </div>
       )}
@@ -1012,17 +1391,21 @@ export default function Interview() {
       {/* Toolbar */}
       <div className="iv-toolbar">
         <div className="iv-search">
-          <RiSearchLine size={14}/>
-          <input placeholder="Search interviews…" value={search}
-                 onChange={e => setSearch(e.target.value)}/>
+          <RiSearchLine size={14} />
+          <input
+            placeholder="Search interviews…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
           {search && (
-            <button className="iv-search-clear" onClick={() => setSearch('')}>
-              <RiCloseLine size={13}/>
+            <button className="iv-search-clear" onClick={() => setSearch("")}>
+              <RiCloseLine size={13} />
             </button>
           )}
         </div>
         <button className="iv-btn iv-btn--ghost iv-btn--sm" onClick={load}>
-          <RiRefreshLine size={13}/>Refresh
+          <RiRefreshLine size={13} />
+          Refresh
         </button>
       </div>
 
@@ -1031,14 +1414,25 @@ export default function Interview() {
         <div className="iv-state">Loading interviews…</div>
       ) : filtered.length === 0 ? (
         <div className="iv-empty">
-          <div className="iv-empty-icon"><RiVideoLine size={26}/></div>
+          <div className="iv-empty-icon">
+            <RiVideoLine size={26} />
+          </div>
           <div className="iv-empty-title">No interviews found</div>
           <div className="iv-empty-sub">
-            {search ? 'Try a different search.' : isAdmin ? 'Create your first interview.' : 'No video interviews assigned yet.'}
+            {search
+              ? "Try a different search."
+              : isAdmin
+                ? "Create your first interview."
+                : "No video interviews assigned yet."}
           </div>
           {isAdmin && !search && (
-            <button className="iv-btn iv-btn--primary" onClick={() => setShowAdd(true)} style={{ marginTop: 16 }}>
-              <RiAddLine size={14}/>Create interview
+            <button
+              className="iv-btn iv-btn--primary"
+              onClick={() => setShowAdd(true)}
+              style={{ marginTop: 16 }}
+            >
+              <RiAddLine size={14} />
+              Create interview
             </button>
           )}
         </div>
@@ -1046,53 +1440,85 @@ export default function Interview() {
         <div className="iv-grid">
           {filtered.map((iv, i) => {
             const done = iv.completed == 2;
-            const exp  = iv.expire_on && new Date(iv.expire_on) < new Date();
-            const showAdminActions = isAdmin && activeTab === 'admin';
+            const exp = iv.expire_on && new Date(iv.expire_on) < new Date();
+            const showAdminActions = isAdmin && activeTab === "admin";
             return (
-              <article key={iv.id} className="iv-card" style={{ animationDelay: `${i * 50}ms` }}>
+              <article
+                key={iv.id}
+                className="iv-card"
+                style={{ animationDelay: `${i * 50}ms` }}
+              >
                 <header className="iv-card-head">
                   <div className="iv-card-icon">
-                    <span className="iv-card-icon-bg"/>
-                    <RiVideoFill size={18}/>
+                    <span className="iv-card-icon-bg" />
+                    <RiVideoFill size={18} />
                   </div>
                   {done ? (
                     <span className="iv-pill iv-pill--ok">
-                      <RiCheckLine size={11}/>Completed
+                      <RiCheckLine size={11} />
+                      Completed
                     </span>
                   ) : exp ? (
                     <span className="iv-pill iv-pill--exp">Expired</span>
                   ) : (
                     <span className="iv-pill iv-pill--pend">
-                      <RiTimeLine size={11}/>Pending
+                      <RiTimeLine size={11} />
+                      Pending
                     </span>
                   )}
                 </header>
                 <h3 className="iv-card-title">{iv.name}</h3>
-                {iv.description && <p className="iv-card-desc">{iv.description}</p>}
+                {iv.description && (
+                  <p className="iv-card-desc">{iv.description}</p>
+                )}
                 <div className="iv-card-meta">
                   {iv.expire_on && (
-                    <span><RiTimeLine size={11}/>Due: {new Date(iv.expire_on).toLocaleDateString('en-IN')}</span>
+                    <span>
+                      <RiTimeLine size={11} />
+                      Due: {new Date(iv.expire_on).toLocaleDateString("en-IN")}
+                    </span>
                   )}
-                  {iv.question_count && <span>{iv.question_count} questions</span>}
+                  {iv.question_count && (
+                    <span>{iv.question_count} questions</span>
+                  )}
                 </div>
 
                 {showAdminActions ? (
                   <div className="iv-card-actions">
-                    <button className="iv-icon-btn" onClick={() => setEditInv(iv)} title="Edit">
-                      <RiEdit2Line size={12}/>
+                    <button
+                      className="iv-icon-btn"
+                      onClick={() => setEditInv(iv)}
+                      title="Edit"
+                    >
+                      <RiEdit2Line size={12} />
                     </button>
-                    <button className="iv-icon-btn" onClick={() => setQMgrInv(iv)} title="Questions">
-                      <RiListUnordered size={12}/>
+                    <button
+                      className="iv-icon-btn"
+                      onClick={() => setQMgrInv(iv)}
+                      title="Questions"
+                    >
+                      <RiListUnordered size={12} />
                     </button>
-                    <button className="iv-icon-btn" onClick={() => setInvInv(iv)} title="Invite">
-                      <RiMailLine size={12}/>
+                    <button
+                      className="iv-icon-btn"
+                      onClick={() => setInvInv(iv)}
+                      title="Invite"
+                    >
+                      <RiMailLine size={12} />
                     </button>
-                    <button className="iv-icon-btn iv-icon-btn--accent"
-                            onClick={() => setSubmissionsInv(iv)} title="View video submissions">
-                      <RiVideoFill size={12}/>
+                    <button
+                      className="iv-icon-btn iv-icon-btn--accent"
+                      onClick={() => setSubmissionsInv(iv)}
+                      title="View video submissions"
+                    >
+                      <RiVideoFill size={12} />
                     </button>
-                    <button className="iv-icon-btn" onClick={() => setChartInv(iv)} title="Analytics">
-                      <RiPieChartLine size={12}/>
+                    <button
+                      className="iv-icon-btn"
+                      onClick={() => setChartInv(iv)}
+                      title="Analytics"
+                    >
+                      <RiPieChartLine size={12} />
                     </button>
                     {/* <button className="iv-icon-btn iv-icon-btn--danger"
                             onClick={() => setConfirmDel(iv)} title="Delete">
@@ -1100,9 +1526,20 @@ export default function Interview() {
                     </button> */}
                   </div>
                 ) : (
-                  <button className="iv-card-cta" onClick={() => setSelInv(iv)} disabled={done || exp}>
-                    {done ? 'Completed' : exp ? 'Expired' : (
-                      <><RiVideoFill size={13}/>Start interview</>
+                  <button
+                    className="iv-card-cta"
+                    onClick={() => setSelInv(iv)}
+                    disabled={done || exp}
+                  >
+                    {done ? (
+                      "Completed"
+                    ) : exp ? (
+                      "Expired"
+                    ) : (
+                      <>
+                        <RiVideoFill size={13} />
+                        Start interview
+                      </>
                     )}
                   </button>
                 )}
@@ -1114,29 +1551,66 @@ export default function Interview() {
 
       {/* Modals */}
       {showAdd && (
-        <InterviewFormModal onClose={() => setShowAdd(false)}
-                            onSaved={() => { setShowAdd(false); load(); show('Interview created', 'ok'); }}
-                            onToast={show}/>
+        <InterviewFormModal
+          onClose={() => setShowAdd(false)}
+          onSaved={() => {
+            setShowAdd(false);
+            load();
+            show("Interview created", "ok");
+          }}
+          onToast={show}
+        />
       )}
       {editInv && (
-        <InterviewFormModal interview={editInv}
-                            onClose={() => setEditInv(null)}
-                            onSaved={() => { setEditInv(null); load(); show('Interview updated', 'ok'); }}
-                            onToast={show}/>
+        <InterviewFormModal
+          interview={editInv}
+          onClose={() => setEditInv(null)}
+          onSaved={() => {
+            setEditInv(null);
+            load();
+            show("Interview updated", "ok");
+          }}
+          onToast={show}
+        />
       )}
-      {qMgrInv  && <QuestionsModal interview={qMgrInv}  onClose={() => setQMgrInv(null)} onToast={show}/>}
-      {invInv   && <InviteModal    interview={invInv}   onClose={() => setInvInv(null)}  onToast={show}/>}
-      {chartInv && <ChartsModal    interview={chartInv} onClose={() => setChartInv(null)}/>}
-      {submissionsInv && <SubmissionsModal interview={submissionsInv} onClose={() => setSubmissionsInv(null)}/>}
+      {qMgrInv && (
+        <QuestionsModal
+          interview={qMgrInv}
+          onClose={() => setQMgrInv(null)}
+          onToast={show}
+        />
+      )}
+      {invInv && (
+        <InviteModal
+          interview={invInv}
+          onClose={() => setInvInv(null)}
+          onToast={show}
+        />
+      )}
+      {chartInv && (
+        <ChartsModal interview={chartInv} onClose={() => setChartInv(null)} />
+      )}
+      {submissionsInv && (
+        <SubmissionsModal
+          interview={submissionsInv}
+          onClose={() => setSubmissionsInv(null)}
+        />
+      )}
 
       {confirmDel && (
         <Modal small onClose={() => setConfirmDel(null)}>
           <h3 className="iv-modal-title">Delete interview?</h3>
           <p className="iv-modal-msg">"{confirmDel.name}" will be removed.</p>
           <div className="iv-modal-foot">
-            <button className="iv-btn iv-btn--ghost" onClick={() => setConfirmDel(null)}>Cancel</button>
+            <button
+              className="iv-btn iv-btn--ghost"
+              onClick={() => setConfirmDel(null)}
+            >
+              Cancel
+            </button>
             <button className="iv-btn iv-btn--danger" onClick={doDelete}>
-              <RiDeleteBin6Line size={13}/>Delete
+              <RiDeleteBin6Line size={13} />
+              Delete
             </button>
           </div>
         </Modal>

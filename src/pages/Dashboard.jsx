@@ -133,7 +133,7 @@ export default function Dashboard() {
       {/* ── Platform Overview ── */}
       {isAdmin() && adminStats && (
         <section className="dh-admin-stats">
-          <div className="dh-sec-label">Platform Overview_old</div>
+          <div className="dh-sec-label">Platform Overview</div>
           <div className="dh-admin-grid">
             {ADMIN_CARDS.map(s => (
               <button key={s.label} className="dh-ac" onClick={() => navigate(s.path)} style={{ '--c1': s.c1, '--c2': s.c2 }}>

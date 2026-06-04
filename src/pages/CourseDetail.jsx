@@ -106,7 +106,25 @@ function TopicTest({ topic, courseId, chapterId, onComplete }) {
   const [locked,    setLocked]    = useState(false);
   const [lockMsg,   setLockMsg]   = useState('');
 
-  useEffect(() => { loadQuestions(); }, [topic.id]);
+  const [pastAttempts, setPastAttempts] = useState([]);
+
+  useEffect(() => {
+    loadQuestions();
+    // Load past attempts + check locked status from backend
+    API.get('/Webservice/getTopicAttempts', { params: { topicID: topic.id, courseID: courseId } })
+      .then(res => {
+        if (res.data.code === 1) {
+          const data = res.data.data;
+          const attempts = data?.attempts || data || [];
+          setPastAttempts(attempts);
+          if (data?.isLocked) {
+            setLocked(true);
+            setLockMsg('Attempt limit reached. Please contact admin to unlock.');
+          }
+        }
+      })
+      .catch(() => {});
+  }, [topic.id]);
 
   const loadQuestions = async () => {
     setLoading(true);
@@ -130,6 +148,18 @@ function TopicTest({ topic, courseId, chapterId, onComplete }) {
         setResult(res.data.data);
         setSubmitted(true);
         if (res.data.data?.passed) onComplete?.();
+        // Reload attempts to check if now locked
+        API.get('/Webservice/getTopicAttempts', { params: { topicID: topic.id, courseID: courseId } })
+          .then(r => {
+            if (r.data.code === 1) {
+              const data = r.data.data;
+              setPastAttempts(data?.attempts || data || []);
+              if (data?.isLocked) {
+                setLocked(true);
+                setLockMsg('Attempt limit reached. Please contact admin to unlock.');
+              }
+            }
+          }).catch(() => {});
       } else if (res.data.code === 0) {
         // Attempt limit reached — locked
         setLocked(true);
@@ -173,6 +203,31 @@ function TopicTest({ topic, courseId, chapterId, onComplete }) {
           <button className="cdp-btn cdp-btn--primary" onClick={loadQuestions}>
             Retry
           </button>
+        )}
+
+        {pastAttempts.length > 0 && (
+          <div className="ta-past">
+            <div className="ta-past-title">Past Attempts</div>
+            {pastAttempts.map((a, i) => {
+              const ok = a.passed;
+              return (
+                <div key={i} className={`ta-attempt ${ok ? 'ta-attempt--pass' : 'ta-attempt--fail'}`}>
+                  <div className="ta-attempt-left">
+                    <div className="ta-attempt-score">{a.percentage}% Score</div>
+                    <div className="ta-attempt-meta">
+                      You attempt <strong>{a.totalQuestions}</strong> questions and from that <strong>{a.correctAnswers}</strong> answer is correct
+                    </div>
+                    <div className="ta-attempt-date">
+                      {a.answeredOn ? new Date(a.answeredOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                    </div>
+                  </div>
+                  <div className={`ta-attempt-icon ${ok ? 'ta-attempt-icon--pass' : 'ta-attempt-icon--fail'}`}>
+                    {ok ? '✓' : '✗'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     );
@@ -870,6 +925,20 @@ const CSS = `
 .ta-opt:hover { background: var(--surface-2); }
 .ta-opt--sel { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
 .ta-opt input[type=radio] { accent-color: var(--accent); flex-shrink: 0; }
+
+/* ── Past Attempts ── */
+.ta-past { margin-top: var(--s-5); text-align: left; border-top: 1px solid var(--border); padding-top: var(--s-4); }
+.ta-past-title { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 400; letter-spacing: -0.025em; color: var(--text); margin-bottom: var(--s-3); text-align: center; }
+.ta-attempt { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) var(--s-4); border-radius: var(--r-md); border: 1px solid var(--border); margin-bottom: var(--s-2); background: var(--surface); }
+.ta-attempt--pass { border-color: var(--success-soft); }
+.ta-attempt--fail { border-color: #fecaca; }
+.ta-attempt-left { flex: 1; }
+.ta-attempt-score { font-size: var(--text-md); font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.ta-attempt-meta { font-size: var(--text-sm); color: var(--text-2); margin-bottom: 3px; }
+.ta-attempt-date { font-size: var(--text-xs); color: var(--text-3); font-style: italic; }
+.ta-attempt-icon { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+.ta-attempt-icon--pass { background: var(--success-soft); color: var(--success); }
+.ta-attempt-icon--fail { background: #fee2e2; color: #dc2626; }
 
 .rs-wrap { padding: var(--s-3) 0; }
 .rs-title { font-size: var(--text-sm); font-weight: 600; color: var(--text); margin-bottom: 12px; letter-spacing: -0.005em; }

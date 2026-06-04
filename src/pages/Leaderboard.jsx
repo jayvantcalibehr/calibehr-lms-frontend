@@ -169,7 +169,7 @@ export default function Leaderboard() {
                       <div className={`lb-avatar lb-avatar--${i < 3 ? ['gold','silver','bronze'][i] : (isMe ? 'me' : 'default')}`}>
                         {d.emp_photo && d.emp_photo.trim()
                           ? <img 
-                              src={d.emp_photo.startsWith('http') ? d.emp_photo : `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}${d.emp_photo}`}
+                              src={d.emp_photo.startsWith('http') ? d.emp_photo : `${import.meta.env.VITE_API_URL || window.location.origin + '/api'}${d.emp_photo}`}
                               alt={d.emp_first_name}
                               onError={(e) => {
                                 e.target.style.display = 'none';
@@ -230,7 +230,7 @@ function PodiumItem({ person, rank }) {
         <div className={`pod-avatar pod-avatar--${tier}`}>
           {person?.emp_photo && person.emp_photo.trim()
             ? <img 
-                src={person.emp_photo.startsWith('http') ? person.emp_photo : `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}${person.emp_photo}`}
+                src={person.emp_photo.startsWith('http') ? person.emp_photo : `${import.meta.env.VITE_API_URL || window.location.origin + '/api'}${person.emp_photo}`}
                 alt={person.emp_first_name}
                 onError={(e) => {
                   e.target.style.display = 'none';

@@ -61,8 +61,7 @@ async function downloadFile(endpoint, params, filename) {
       v.forEach(item => query.append(`${k}[]`, item));
     }
   });
-  const base = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
-  const url  = `${base}${endpoint}${query.toString() ? '?' + query.toString() : ''}`;
+const base = import.meta.env.VITE_API_URL || window.location.origin + '/api';  const url  = `${base}${endpoint}${query.toString() ? '?' + query.toString() : ''}`;
   const res  = await fetch(url, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
   });

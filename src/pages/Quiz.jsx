@@ -39,7 +39,7 @@ function QuizFormModal({ quiz, onClose, onSaved, onToast }) {
     setSaving(false);
   };
   return (
-    <Modal onClose={() => !saving && onClose()}>
+    <Modal onClose={() => !saving && onClose()}>``
       <div className="qz-modal-head">
         <h2 className="qz-modal-title">{isEdit ? 'Edit quiz' : 'New quiz'}</h2>
         <button className="qz-modal-close" onClick={onClose} disabled={saving}>
@@ -131,7 +131,9 @@ function QuestionsModal({ quiz, onClose, onToast }) {
     try {
       const res = await API.get('/Webservice/getQuizDetails', { params: { quizID: quiz.id } });
       if (res.data.code === 1) setQuestions(res.data.data?.questions || []);
-    } catch {}
+} catch (err) {
+  console.error(err);
+}
     setLoading(false);
   };
 
@@ -304,7 +306,9 @@ function InviteModal({ quiz, onClose, onToast }) {
     try {
       const res = await API.get('/Webservice/getInvitedList', { params: { quizID: quiz.id } });
       if (res.data.code === 1) setInvList(res.data.data || []);
-    } catch {}
+} catch (err) {
+  console.error(err);
+}
     setLoadingList(false);
   };
 
@@ -725,7 +729,9 @@ export default function Quiz() {
     try {
       const res = await API.get('/Webservices/getAllQuizList');
       if (res.data.code === 1) setQuizzes(res.data.data || []);
-    } catch {}
+    } catch (err) {
+  console.error(err);
+}
     setLoading(false);
   };
 

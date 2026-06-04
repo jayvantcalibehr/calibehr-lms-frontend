@@ -103,6 +103,13 @@ export default function Sidebar({ open, onClose }) {
   return (
     <>
       <style>{CSS}</style>
+			{open && (
+  <div
+    className="sb-overlay"
+    onClick={onClose}
+    aria-hidden="true"
+  />
+)}
       <aside className={`sb ${open ? 'sb--open' : ''}`} aria-label="Sidebar navigation">
 
         {/* Brand */}
@@ -456,6 +463,19 @@ const CSS = `
   }
   .sb--open { transform: translateX(0); }
   .sb-close { display: flex; }
+}
+	.sb-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 199;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+@media (max-width: 1024px) {
+  .sb-overlay { display: block; }
 }
 `;
 

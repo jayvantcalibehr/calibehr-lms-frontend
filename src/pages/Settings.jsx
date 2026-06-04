@@ -50,8 +50,7 @@ function ProfileTab() {
     try {
       const form = new FormData();
       form.append('photo', photoFile);
-      const base = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
-      const res = await fetch(`${base}/upload/profile-photo`, {
+const base = import.meta.env.VITE_API_URL || window.location.origin + '/api';      const res = await fetch(`${base}/upload/profile-photo`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: form,
