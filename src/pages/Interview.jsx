@@ -1627,7 +1627,7 @@ const CSS = `
 .iv-sub { font-size: var(--text-md); color: var(--text-2); margin: 0; line-height: 1.5; }
 
 /* ── Toast ── */
-.iv-toast { position: fixed; top: 80px; right: 28px; display: flex; align-items: center; gap: var(--s-2); padding: 11px 16px; border-radius: var(--r-md); font-size: var(--text-sm); font-weight: 600; box-shadow: var(--shadow-lg); z-index: 1000; animation: ivSlide 280ms var(--ease-bounce); }
+.iv-toast { position: fixed; top: 80px; right: 28px; display: flex; align-items: center; gap: var(--s-2); padding: 11px 16px; border-radius: var(--r-md); font-size: var(--text-sm); font-weight: 600; box-shadow: var(--shadow-lg); z-index: 9999; animation: ivSlide 280ms var(--ease-bounce); }
 .iv-toast--ok  { background: var(--accent); color: var(--accent-text); }
 .iv-toast--err { background: var(--danger); color: #fff; }
 @keyframes ivSlide { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }

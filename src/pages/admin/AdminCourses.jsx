@@ -1563,8 +1563,7 @@ const CSS = `
 .ac-title{font-family:var(--font-display);font-size:var(--text-4xl);font-weight:400;letter-spacing:-0.03em;color:var(--text);margin:0 0 6px;line-height:1}
 .ac-title--sm{font-size:var(--text-2xl);margin:0;line-height:1.2}
 .ac-sub{font-size:var(--text-md);color:var(--text-2);margin:0;line-height:1.5}
-.ac-toast{position:fixed;top:80px;right:28px;display:flex;align-items:center;gap:var(--s-2);padding:11px 16px;border-radius:var(--r-md);font-size:var(--text-sm);font-weight:600;box-shadow:var(--shadow-lg);z-index:1000;animation:acSlide 280ms var(--ease-bounce)}
-.ac-toast--ok{background:var(--accent);color:var(--accent-text)}
+.ac-toast{position:fixed;top:80px;right:28px;display:flex;align-items:center;gap:var(--s-2);padding:11px 16px;border-radius:var(--r-md);font-size:var(--text-sm);font-weight:600;box-shadow:var(--shadow-lg);z-index:9999;animation:acSlide 280ms var(--ease-bounce)}.ac-toast--ok{background:var(--accent);color:var(--accent-text)}
 .ac-toast--err{background:var(--danger);color:#fff}
 @keyframes acSlide{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
 .ac-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-3);margin-bottom:var(--s-4);animation:acFadeUp 500ms var(--ease-out) 100ms both}
