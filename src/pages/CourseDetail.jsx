@@ -20,12 +20,26 @@ function VideoPlayer({ url, onComplete, videoType }) {
   const [watched, setWatched] = useState(false);
 
   console.log('[VideoPlayer] url:', url, 'videoType:', videoType);
-  const isYoutube = videoType === 2 || (url && (url.includes('youtube.com') || url.includes('youtu.be')));
-  console.log('[VideoPlayer] isYoutube:', isYoutube);
-  const getYoutubeId = (u) => {
-    const match = u.match(/(?:youtu\.be\/|[?&]v=)([a-zA-Z0-9_-]{11})/);
-    return match ? match[1] : '';
-  };
+// const isYoutube = videoType === 2 || 
+//   (url && (url.includes('youtube.com') || url.includes('youtu.be')));
+	// const isYoutube = url && (url.includes('youtube.com') || url.includes('youtu.be'));
+	const isYoutube = !!(url && (url.includes('youtube.com') || url.includes('youtu.be')));
+
+const getYoutubeId = (u) => {
+  if (!u) return '';
+  // youtube.com/watch?v=ID
+  const m1 = u.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (m1) return m1[1];
+  // youtu.be/ID
+  const m2 = u.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (m2) return m2[1];
+  // youtube.com/embed/ID
+  const m3 = u.match(/embed\/([a-zA-Z0-9_-]{11})/);
+  if (m3) return m3[1];
+  // Sirf 11 char ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(u.trim())) return u.trim();
+  return '';
+};
 
   const handleTimeUpdate = () => {
     if (!videoRef.current) return;
@@ -41,13 +55,14 @@ function VideoPlayer({ url, onComplete, videoType }) {
     return (
       <div className="vp-wrap">
         <div className="vp-iframe-wrap">
-          <iframe
-            className="vp-iframe"
-            src={`https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            title="Course Video"
-          />
+<iframe
+  className="vp-iframe"
+  src={`https://www.youtube-nocookie.com/embed/${vid}?rel=0&modestbranding=1`}
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  allowFullScreen
+  referrerPolicy="strict-origin-when-cross-origin"
+  title="Course Video"
+/>
         </div>
         {!watched && (
           <button
