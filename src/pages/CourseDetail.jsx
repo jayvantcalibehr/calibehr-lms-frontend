@@ -24,20 +24,29 @@ function VideoPlayer({ url, onComplete, videoType }) {
 //   (url && (url.includes('youtube.com') || url.includes('youtu.be')));
 	// const isYoutube = url && (url.includes('youtube.com') || url.includes('youtu.be'));
 	const isYoutube = !!(url && (url.includes('youtube.com') || url.includes('youtu.be')));
+	  const getEmbedUrl = (u) => {
+    if (!u) return '';
+    if (u.includes('/embed/')) return u;
+    if (u.includes('youtu.be/')) {
+      return u.replace('youtu.be/', 'www.youtube.com/embed/').split('?')[0];
+    }
+    if (u.includes('watch?v=')) {
+      return u.replace('watch?v=', 'embed/').split('&')[0];
+    }
+    return u;
+  };
 
 const getYoutubeId = (u) => {
   if (!u) return '';
+  // youtu.be/ID — variable length
+const m1 = u.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+if (m1) return m1[1].split('?')[0];
   // youtube.com/watch?v=ID
-  const m1 = u.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
-  if (m1) return m1[1];
-  // youtu.be/ID
-  const m2 = u.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  const m2 = u.match(/[?&]v=([a-zA-Z0-9_-]+)/);
   if (m2) return m2[1];
   // youtube.com/embed/ID
-  const m3 = u.match(/embed\/([a-zA-Z0-9_-]{11})/);
+  const m3 = u.match(/embed\/([a-zA-Z0-9_-]+)/);
   if (m3) return m3[1];
-  // Sirf 11 char ID
-  if (/^[a-zA-Z0-9_-]{11}$/.test(u.trim())) return u.trim();
   return '';
 };
 
@@ -57,7 +66,8 @@ const getYoutubeId = (u) => {
         <div className="vp-iframe-wrap">
 <iframe
   className="vp-iframe"
-  src={`https://www.youtube-nocookie.com/embed/${vid}?rel=0&modestbranding=1`}
+  // src={`https://www.youtube-nocookie.com/embed/${vid}?rel=0&modestbranding=1`}
+	src={`${getEmbedUrl(url)}?rel=0&modestbranding=1`}
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
   allowFullScreen
   referrerPolicy="strict-origin-when-cross-origin"
