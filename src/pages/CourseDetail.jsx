@@ -24,17 +24,17 @@ function VideoPlayer({ url, onComplete, videoType }) {
 //   (url && (url.includes('youtube.com') || url.includes('youtu.be')));
 	// const isYoutube = url && (url.includes('youtube.com') || url.includes('youtu.be'));
 	const isYoutube = !!(url && (url.includes('youtube.com') || url.includes('youtu.be')));
-	  const getEmbedUrl = (u) => {
-    if (!u) return '';
-    if (u.includes('/embed/')) return u;
-    if (u.includes('youtu.be/')) {
-      return u.replace('youtu.be/', 'www.youtube.com/embed/').split('?')[0];
-    }
-    if (u.includes('watch?v=')) {
-      return u.replace('watch?v=', 'embed/').split('&')[0];
-    }
-    return u;
-  };
+ const getEmbedUrl = (u) => {
+  if (!u) return '';
+  if (u.includes('/embed/')) return u;
+  if (u.includes('youtu.be/')) {
+    return u.replace('youtu.be/', 'www.youtube.com/embed/').split('?')[0];
+  }
+  if (u.includes('watch?v=')) {
+    return u.replace('watch?v=', 'embed/').split('&')[0];
+  }
+  return u;
+};
 
 const getYoutubeId = (u) => {
   if (!u) return '';
